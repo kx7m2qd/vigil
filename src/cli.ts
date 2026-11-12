@@ -6,6 +6,8 @@ import { enginePath, installEngine, isInstalled, resolveEngine } from "./engines
 import { ENGINES } from "./engines/manifest.js";
 import { RULES_DIR } from "./engines/opengrep.js";
 import { run } from "./engines/run.js";
+import { install, uninstall } from "./hook/install.js";
+import { hookRun } from "./hook/run.js";
 import { toSarif } from "./report/sarif.js";
 import { toText } from "./report/text.js";
 import { ALL_ENGINES, scan } from "./scan.js";
@@ -22,6 +24,14 @@ Usage:
       --no-install                 Do not auto-install missing engines
   ${TOOL_NAME} engines install      Download and verify the pinned engine binaries
   ${TOOL_NAME} engines status       Show which engines are installed
+  ${TOOL_NAME} hook install [--force]  Install a git pre-commit hook. It scans staged content (the
+                                    index) with opengrep + gitleaks and only reports added lines.
+                                    Secrets always block; other findings block at --fail-on.
+  ${TOOL_NAME} hook uninstall       Remove the hook (only if vigil wrote it; restores a backed-up hook)
+  ${TOOL_NAME} hook run [--fail-on <severity|none>]
+                                    What the hook calls (default: high). Exit 1 blocked, 2 engine
+                                    missing (fail closed). Dependency checks: use \`${TOOL_NAME} scan\` in CI.
+                                    Bypass once: git commit with the no-verify flag.
   ${TOOL_NAME} test-rules           Run the rule test suite (rules/**)
 
 Exit codes: 0 clean · 1 findings at or above --fail-on · 2 usage or engine error
@@ -105,6 +115,35 @@ async function cmdEngines(args: string[]): Promise<number> {
   fail(`usage: ${TOOL_NAME} engines install|status`);
 }
 
+async function cmdHook(args: string[]): Promise<number> {
+  const [sub, ...rest] = args;
+  if (sub === "install") {
+    const { values } = parseArgs({ args: rest, options: { force: { type: "boolean", default: false } } });
+    const res = await install({ force: values.force });
+    (res.code === 0 ? process.stdout : process.stderr).write(`${TOOL_NAME}: ${res.message}\n`);
+    return res.code;
+  }
+  if (sub === "uninstall") {
+    parseArgs({ args: rest, options: {} });
+    const res = await uninstall();
+    (res.code === 0 ? process.stdout : process.stderr).write(`${TOOL_NAME}: ${res.message}\n`);
+    return res.code;
+  }
+  if (sub === "run") {
+    const { values } = parseArgs({
+      args: rest,
+      allowPositionals: true,
+      options: { "fail-on": { type: "string", default: "high" } },
+    });
+    const failOn = values["fail-on"];
+    if (failOn !== "none" && !SEVERITY_ORDER.includes(failOn as Severity)) fail(`unknown severity "${failOn}"`);
+    const res = await hookRun({ failOn: failOn as Severity | "none", color: process.stderr.isTTY === true });
+    if (res.output) process.stderr.write(res.output);
+    return res.code;
+  }
+  fail(`usage: ${TOOL_NAME} hook install|uninstall|run`);
+}
+
 async function cmdTestRules(): Promise<number> {
   const bin = await resolveEngine("opengrep", { autoInstall: true });
   const res = await run(bin, ["test", RULES_DIR]);
@@ -120,6 +159,8 @@ async function main(argv: string[]): Promise<number> {
       return cmdScan(rest);
     case "engines":
       return cmdEngines(rest);
+    case "hook":
+      return cmdHook(rest);
     case "test-rules":
       return cmdTestRules();
     case "--version":
