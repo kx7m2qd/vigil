@@ -1,0 +1,29 @@
+rules:
+  - id: js-insecure-cookie
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A session or auth cookie is sent without the `Secure` flag, so the browser also sends it over
+      plain HTTP where anyone on the network can read it and hijack the session. Set
+      `{ secure: true, httpOnly: true, sameSite: 'lax' }` on `res.cookie(...)`, and
+      `cookie: { secure: true }` in `express-session` / `cookie-session` (with `app.set('trust proxy', 1)`
+      behind a TLS-terminating proxy).
+    metadata:
+      title: Cookie without the Secure flag
+      cwe: ["CWE-614: Sensitive Cookie in HTTPS Session Without 'Secure' Attribute"]
+      owasp: ["A05:2021 - Security Misconfiguration"]
+      confidence: high
+    pattern-either:
+      - pattern: '$R.cookie($N, $V, {..., secure: false, ...})'
+      - pattern: '$S({..., cookie: {..., secure: false, ...}, ...})'
+      - pattern: 'cookieSession({..., secure: false, ...})'
+      # Express defaults to insecure. Only flag the default for cookies that look like auth, so a
+      # `theme` cookie stays quiet. Options passed as a variable are built elsewhere: stay quiet.
+      - patterns:
+          - pattern-either:
+              - pattern: $R.cookie("$NAME", $V)
+              - pattern: '$R.cookie("$NAME", $V, {...})'
+          - pattern-not: '$R.cookie("$NAME", $V, {..., secure: $X, ...})'
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: (?i).*(sess|sid|token|auth|jwt|remember|csrf|xsrf|login)

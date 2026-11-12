@@ -1,0 +1,66 @@
+rules:
+  - id: js-sql-formatted-query
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A SQL statement is built with a template literal or `+` and passed to a query function. If any
+      interpolated value can come from a caller, a request, or another service, it can rewrite the
+      query. Use bound parameters (`pool.query('... WHERE id = ANY($1)', [ids])`, Knex bindings,
+      Prisma `$queryRaw` tagged templates); identifiers must come from an allowlist.
+    metadata:
+      title: SQL built with string interpolation
+      cwe: ["CWE-89: Improper Neutralization of Special Elements used in an SQL Command"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: medium
+    options:
+      symbolic_propagation: true
+    mode: taint
+    pattern-sources:
+      # Template literals with at least one interpolation not wrapped in Number()/parseInt().
+      - patterns:
+          - pattern: "`...${$X}...`"
+          - pattern: $SRC
+          - metavariable-regex:
+              metavariable: $SRC
+              regex: (?s).*\$\{(?!\s*(Number|parseInt)\()
+          - metavariable-regex:
+              metavariable: $SRC
+              regex: (?is).*\b(select\s|insert\s+into|update\s.+\sset\s|delete\s+from|where\s|order\s+by|(create|alter|drop)\s+table)
+      # Concatenations with at least one operand that is not a literal or a coerced/escaped value.
+      - patterns:
+          - pattern-either:
+              - pattern: "'...' + $X"
+              - pattern: "$X + '...'"
+              - pattern: "$A + $X"
+          - metavariable-pattern:
+              metavariable: $X
+              patterns:
+                - pattern-not: "'...'"
+                - pattern-not: $L + $R
+          - pattern-not: "'...'"
+          # Here, unlike inside metavariable-pattern, symbolic propagation sees through
+          # `const id = Number(req.params.id)`.
+          - pattern-not: $A + Number(...)
+          - pattern-not: $A + parseInt(...)
+          - pattern-not: $A + $M.escape(...)
+          - pattern-not: $A + $M.escapeId(...)
+          - pattern: $SRC
+          - metavariable-regex:
+              metavariable: $SRC
+              regex: (?is).*\b(select\s|insert\s+into|update\s.+\sset\s|delete\s+from|where\s|order\s+by|(create|alter|drop)\s+table)
+    pattern-sanitizers:
+      - pattern: parseInt(...)
+      - pattern: Number(...)
+      - pattern: $X.escape(...)
+      - pattern: $X.escapeId(...)
+      - pattern: $X.format(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.query($SQL, ...)
+              - pattern: $DB.execute($SQL, ...)
+              - pattern: $DB.raw($SQL, ...)
+              - pattern: $DB.whereRaw($SQL, ...)
+              - pattern: $DB.$queryRawUnsafe($SQL, ...)
+              - pattern: $DB.$executeRawUnsafe($SQL, ...)
+          - focus-metavariable: $SQL

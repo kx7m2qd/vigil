@@ -1,0 +1,39 @@
+rules:
+  - id: js-unsafe-deserialization
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Untrusted data is deserialized with a library that can rebuild functions (node-serialize,
+      funcster, cryo, or js-yaml with the full schema). A payload containing an immediately invoked
+      function (`_$$ND_FUNC$$_function(){...}()`) or `!!js/function` runs arbitrary code on the
+      server as soon as it is parsed. Use `JSON.parse` for data, and `yaml.load` with the default
+      (safe) schema in js-yaml 4+.
+    metadata:
+      title: Unsafe deserialization
+      cwe: ["CWE-502: Deserialization of Untrusted Data"]
+      owasp: ["A08:2021 - Software and Data Integrity Failures"]
+      confidence: high
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $S.unserialize($X, ...)
+              - pattern: unserialize($X, ...)
+              - pattern: $F.deepDeserialize($X, ...)
+              - pattern: cryo.parse($X, ...)
+              - pattern: '$Y.load($X, {..., schema: $Y.DEFAULT_FULL_SCHEMA, ...})'
+              - pattern: '$Y.loadAll($X, $CB, {..., schema: $Y.DEFAULT_FULL_SCHEMA, ...})'
+              - pattern: '$Y.load($X, {..., schema: $Y.FULL_SCHEMA, ...})'
+          - focus-metavariable: $X

@@ -1,0 +1,84 @@
+rules:
+  - id: py-path-traversal
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Request data is used as a file path. `../` sequences or an absolute path let an attacker read,
+      overwrite or delete files outside the intended folder (e.g. `../../.env`); joining it onto a base
+      directory does not prevent this. Use `os.path.basename()` or `werkzeug.utils.secure_filename()`
+      for file names, or resolve the path and reject it unless it is still inside the base directory
+      (`Path(base, name).resolve().is_relative_to(base)`); in Flask use `send_from_directory`.
+    metadata:
+      title: Path traversal
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory"]
+      owasp: ["A01:2021 - Broken Access Control"]
+      confidence: high
+    mode: taint
+    pattern-sources:
+      - pattern: flask.request.$ATTR
+      - pattern: flask.request.$METHOD(...)
+      # The request handed whole to a wrapper (`RequestWrapper(request).get_form_parameter(...)`).
+      - pattern: $WRAP(flask.request)
+      - patterns:
+          - pattern-inside: |
+              def $VIEW($REQ, ...):
+                ...
+          - pattern-either:
+              - pattern: $REQ.GET
+              - pattern: $REQ.POST
+              - pattern: $REQ.FILES
+              - pattern: $REQ.COOKIES
+    pattern-sanitizers:
+      - pattern: os.path.basename(...)
+      - pattern: werkzeug.utils.secure_filename(...)
+      - pattern: int(...)
+      - pattern: float(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: open($P, ...)
+              - pattern: io.open($P, ...)
+              - pattern: codecs.open($P, ...)
+              - pattern: os.open($P, ...)
+              - pattern: os.path.exists($P)
+              - pattern: os.path.isfile($P)
+              - pattern: os.remove($P)
+              - pattern: os.unlink($P)
+              - pattern: os.listdir($P)
+              - pattern: shutil.$FN($P, ...)
+              - pattern: flask.send_file($P, ...)
+              - pattern: $P.open(...)
+              - pattern: $P.read_text(...)
+              - pattern: $P.read_bytes(...)
+              - pattern: $P.write_text(...)
+              - pattern: $P.write_bytes(...)
+              - pattern: $P.exists()
+              - pattern: $P.is_file()
+              - pattern: $P.unlink(...)
+          # A containment check before the file is touched.
+          - pattern-not-inside: |
+              if "../" in $B:
+                  ...
+                  return ...
+              ...
+          - pattern-not-inside: |
+              if ".." in $B:
+                  ...
+                  return ...
+              ...
+          - pattern-not-inside: |
+              if not <... $R.startswith(...) ...>:
+                  ...
+                  return ...
+              ...
+          - pattern-not-inside: |
+              if not <... $R.is_relative_to(...) ...>:
+                  ...
+                  return ...
+              ...
+          - pattern-not-inside: |
+              if <... os.path.commonpath(...) ...> != $BASE:
+                  ...
+                  return ...
+              ...
+          - focus-metavariable: $P

@@ -1,0 +1,45 @@
+rules:
+  - id: js-code-injection
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Request data is executed as JavaScript. This gives an attacker full code execution on the
+      server. Never pass user input to `eval`, `new Function`, string `setTimeout`, or `vm`; the `vm`
+      module is not a security sandbox. Parse data with `JSON.parse` or map inputs to a fixed set of
+      functions instead.
+    metadata:
+      title: Code injection (eval / Function / vm)
+      cwe: ["CWE-94: Improper Control of Generation of Code ('Code Injection')"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: high
+      severity: critical
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+    pattern-sanitizers:
+      - pattern: JSON.parse(...)
+      - pattern: parseInt(...)
+      - pattern: Number(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: eval($CODE)
+              - pattern: new Function(..., $CODE)
+              - pattern: Function(..., $CODE)
+              - pattern: setTimeout($CODE, ...)
+              - pattern: setInterval($CODE, ...)
+              - pattern: vm.runInNewContext($CODE, ...)
+              - pattern: vm.runInThisContext($CODE, ...)
+              - pattern: vm.runInContext($CODE, ...)
+              - pattern: new vm.Script($CODE, ...)
+          - focus-metavariable: $CODE

@@ -1,0 +1,7 @@
+# Paths excluded from `vigil scan`. One per line: a path prefix or a directory name.
+# These folders are intentionally vulnerable (rule tests and benchmark cases).
+rules/
+bench/cases/
+test/fixtures/
+# Local tool caches (code indexes copy source, including test fixtures).
+.serena/

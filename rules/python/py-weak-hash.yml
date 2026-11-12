@@ -1,0 +1,91 @@
+rules:
+  - id: py-weak-hash
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A password or secret is hashed with MD5/SHA-1 (or a weak digest is stored as one). These hashes
+      are fast and broken, so a leaked hash is cracked offline in seconds. Hash passwords with a slow,
+      salted KDF: `hashlib.scrypt`, `argon2-cffi`, `bcrypt`, or `werkzeug.security.generate_password_hash`.
+      For non-security checksums, pass `usedforsecurity=False`.
+    metadata:
+      title: Weak hash used for a password or secret
+      cwe: ["CWE-328: Use of Weak Hash"]
+      owasp: ["A02:2021 - Cryptographic Failures"]
+      confidence: medium
+      severity: medium
+    # Scoped to credentials on purpose: MD5/SHA-1 for ETags, cache keys, uuid5 and file checksums is
+    # fine. Two labels so a credential only matters when it meets a weak hash, and vice versa.
+    mode: taint
+    pattern-sources:
+      - label: CRED
+        patterns:
+          - pattern-either:
+              - pattern: $W
+              - pattern: $O.$W
+          - metavariable-regex:
+              metavariable: $W
+              regex: (?i).*(passw|passphrase|pwd|secret|credential)
+      - label: CRED
+        pattern-either:
+          - pattern: $D["=~/(?i)(passw|passphrase|pwd|secret|credential)/"]
+          - pattern: $D.get("=~/(?i)(passw|passphrase|pwd|secret|credential)/", ...)
+      - label: WEAK
+        patterns:
+          - pattern-either:
+              - pattern: hashlib.md5(...)
+              - pattern: hashlib.sha1(...)
+              - patterns:
+                  - pattern: hashlib.new("$ALG", ...)
+                  - metavariable-regex:
+                      metavariable: $ALG
+                      regex: (?i)^(md4|md5|sha1|sha-1|ripemd160)$
+          - pattern-not: hashlib.$H(..., usedforsecurity=False, ...)
+    pattern-sinks:
+      # A credential hashed with a weak algorithm.
+      - requires: CRED
+        patterns:
+          - pattern-either:
+              - pattern: hashlib.md5($X, ...)
+              - pattern: hashlib.sha1($X, ...)
+              - patterns:
+                  - pattern: hashlib.new("$ALG", $X, ...)
+                  - metavariable-regex:
+                      metavariable: $ALG
+                      regex: (?i)^(md4|md5|sha1|sha-1|ripemd160)$
+              - patterns:
+                  - pattern-inside: |
+                      $H = hashlib.$C(...)
+                      ...
+                  - pattern: $H.update($X)
+                  - metavariable-regex:
+                      metavariable: $C
+                      regex: ^(md5|sha1)$
+              - patterns:
+                  - pattern-inside: |
+                      $H = hashlib.new("$ALG", ...)
+                      ...
+                  - pattern: $H.update($X)
+                  - metavariable-regex:
+                      metavariable: $ALG
+                      regex: (?i)^(md4|md5|sha1|sha-1|ripemd160)$
+          - pattern-not-inside: hashlib.$FN(..., usedforsecurity=False, ...)
+          - focus-metavariable: $X
+      # A weak digest stored as a credential.
+      - requires: WEAK
+        patterns:
+          - pattern-either:
+              - patterns:
+                  - pattern-either:
+                      - pattern: $O.$W = $X
+                      - pattern: $W = $X
+                      - pattern: $F(..., $W=$X, ...)
+                  - metavariable-regex:
+                      metavariable: $W
+                      regex: (?i).*(passw|passphrase|pwd|secret|credential)
+              - pattern: $D["=~/(?i)(passw|passphrase|pwd|secret|credential)/"] = $X
+              - patterns:
+                  - pattern-inside: |
+                      $FH = open(<... "=~/(?i)(passw|passphrase|pwd|secret|credential)/" ...>, ...)
+                      ...
+                  - pattern: $FH.write($X)
+          - focus-metavariable: $X

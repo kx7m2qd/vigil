@@ -1,0 +1,194 @@
+{
+  "pass": true,
+  "recall": 1,
+  "detected": 20,
+  "fixStillFlagged": 0,
+  "total": 20,
+  "thresholds": {
+    "recall": 0.95,
+    "maxFixStillFlagged": 0
+  },
+  "cases": [
+    {
+      "id": "GHSA-f2mf-q878-gh58",
+      "rule": "py-sql-injection",
+      "detectedBy": [
+        "py-sql-formatted-query"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-pwh4-6r3m-j2rf",
+      "rule": "py-sql-injection",
+      "detectedBy": [
+        "py-sql-formatted-query"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-rh5m-2482-966c",
+      "rule": "py-sql-injection",
+      "detectedBy": [
+        "py-sql-formatted-query"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-vghm-8cjp-hjw6",
+      "rule": "py-sql-injection",
+      "detectedBy": [
+        "py-sql-formatted-query"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-6497-prx7-gpmq",
+      "rule": "py-sql-injection",
+      "detectedBy": [
+        "py-sql-formatted-query"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-h6m6-jj8v-94jj",
+      "rule": "py-sql-injection",
+      "detectedBy": [
+        "py-sql-formatted-query"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-hj3w-wrh4-44vp",
+      "rule": "py-command-injection",
+      "detectedBy": [
+        "py-shell-formatted-command"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-7pc3-pr3q-58vg",
+      "rule": "py-command-injection",
+      "detectedBy": [
+        "py-shell-formatted-command"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-69w3-r845-3855",
+      "rule": "py-unsafe-deserialization",
+      "detectedBy": [
+        "py-unsafe-deserialization"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-vqxf-v2gg-x3hc",
+      "rule": "py-unsafe-deserialization",
+      "detectedBy": [
+        "py-unsafe-deserialization"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-jg22-mg44-37j8",
+      "rule": "py-unsafe-deserialization",
+      "detectedBy": [
+        "py-unsafe-deserialization"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-ffwf-47x2-jpr8",
+      "rule": "js-sql-injection",
+      "detectedBy": [
+        "js-sql-formatted-query"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-4948-f92q-f432",
+      "rule": "js-sql-injection",
+      "detectedBy": [
+        "js-sql-quoted-in-list"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-4x45-gxvp-6283",
+      "rule": "js-command-injection",
+      "detectedBy": [
+        "js-shell-formatted-command"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-5xpp-75jx-m839",
+      "rule": "js-command-injection",
+      "detectedBy": [
+        "js-shell-formatted-command"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-79wm-x847-7cvg",
+      "rule": "js-command-injection",
+      "detectedBy": [
+        "js-command-injection"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-2mf3-mr2r-r4vf",
+      "rule": "js-path-traversal",
+      "detectedBy": [
+        "js-path-join-unchecked"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-rxjr-6c9q-h67x",
+      "rule": "js-path-traversal",
+      "detectedBy": [
+        "js-path-join-unchecked"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-88pr-878c-24wf",
+      "rule": "js-path-traversal",
+      "detectedBy": [
+        "js-path-join-unchecked"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    },
+    {
+      "id": "GHSA-hfhx-w8p8-4hc7",
+      "rule": "js-ssrf",
+      "detectedBy": [
+        "js-ssrf-url-download"
+      ],
+      "detected": true,
+      "fixStillFlagged": false
+    }
+  ],
+  "warnings": []
+}

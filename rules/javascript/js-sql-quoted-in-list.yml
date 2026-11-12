@@ -1,0 +1,17 @@
+rules:
+  - id: js-sql-quoted-in-list
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A SQL `IN (...)` list is built by joining values with `','` inside quotes. A value containing a
+      single quote closes the string and injects SQL (`x') OR 1=1 --`). Bind the list as one
+      parameter instead (`WHERE id = ANY($1)` in Postgres, `whereIn('id', ids)` in Knex,
+      `{ id: ids }` in Sequelize) or generate one placeholder per value.
+    metadata:
+      title: SQL IN-list built by quoting and joining values
+      cwe: ["CWE-89: Improper Neutralization of Special Elements used in an SQL Command"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: high
+    pattern-either:
+      - pattern-regex: '''\$\{\s*[\w.$]+(\([^)]*\))?\.join\(\s*["''`]\s*''\s*,\s*''\s*["''`]\s*\)\s*\}'''
+      - pattern-regex: '\+\s*[\w.$]+(\([^)]*\))?\.join\(\s*["''`]\s*''\s*,\s*''\s*["''`]\s*\)\s*\+'

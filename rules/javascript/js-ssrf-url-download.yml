@@ -1,0 +1,53 @@
+rules:
+  - id: js-ssrf-url-download
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A URL passed in by the caller is fetched as-is and the response is saved to a file. This is the
+      "import from URL" shape behind many SSRF bugs: if the URL can come from a user, they can point it
+      at `http://169.254.169.254/` (cloud metadata), `localhost` admin ports or internal services, and
+      the saved file hands them the response. Fetch through a client that resolves the host and blocks
+      private, loopback and link-local addresses (and re-checks on redirects), or only allow known hosts.
+    metadata:
+      title: Caller-supplied URL downloaded to disk
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      owasp: ["A10:2021 - Server-Side Request Forgery (SSRF)"]
+      confidence: medium
+    patterns:
+      - pattern-either:
+          - pattern-inside: function $F(..., $P, ...) { ... }
+          - pattern-inside: function (..., $P, ...) { ... }
+          - pattern-inside: (..., $P, ...) => { ... }
+          - pattern-inside: |
+              class $C { ... $M(..., $P, ...) { ... } ... }
+      # The parameter is the whole URL: a fixed scheme and host in front of it pins the destination.
+      - pattern-either:
+          - pattern-inside: |
+              $RES = await $FETCH($P, ...);
+              ...
+          - pattern-inside: |
+              $RES = await $FETCH($P, ...).$THEN(...);
+              ...
+      # ...and the response is written out, not just parsed (plain API clients do the latter).
+      - pattern-either:
+          - pattern-inside: |
+              $RES = $X;
+              ...
+              $W = <... fs.createWriteStream(...) ...>;
+              ...
+          - pattern-inside: |
+              $RES = $X;
+              ...
+              <... $FS.writeFile(..., <... $RES ...>, ...) ...>;
+          - pattern-inside: |
+              $RES = $X;
+              ...
+              <... $FS.writeFileSync(..., <... $RES ...>, ...) ...>;
+          - pattern-inside: |
+              $RES = $X;
+              ...
+              <... $RES.body.pipe(...) ...>;
+      - pattern: $FETCH($P, ...)
+      - metavariable-regex:
+          metavariable: $FETCH
+          regex: ^(fetch|axios|axios\.(get|request)|got|got\.get|undici\.request|request)$

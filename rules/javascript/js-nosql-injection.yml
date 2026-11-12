@@ -1,0 +1,103 @@
+rules:
+  - id: js-nosql-injection
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Request data is used inside a MongoDB query (NoSQL injection). Express parses
+      `?password[$ne]=x` and JSON bodies into objects, so an attacker can send `{"$ne": null}`
+      instead of a string and match every document, bypassing login checks, or inject `$where`
+      JavaScript. Cast each field to the type you expect (`String(req.body.user)`), validate with a
+      schema (zod, Joi), or strip operators with `mongo-sanitize` / `express-mongo-sanitize`.
+    metadata:
+      title: NoSQL (MongoDB) operator injection
+      cwe: ["CWE-943: Improper Neutralization of Special Elements in Data Query Logic"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: medium
+    mode: taint
+    pattern-sources:
+      # Only query/body/cookies can carry objects like {"$ne": null}; route params are strings.
+      - label: OBJ
+        patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.cookies
+      # Any string is enough to inject into `$where` JavaScript.
+      - label: STR
+        patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.params
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.cookies
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: Number(...)
+          - pattern: parseInt(...)
+          - pattern: parseFloat(...)
+          - pattern: sanitize(...)
+          - pattern: mongoSanitize.sanitize(...)
+          - pattern: new ObjectId(...)
+          - pattern: ObjectId(...)
+          - pattern: $T.Types.ObjectId(...)
+          - pattern: $S.parse(...)
+          - pattern: $S.validate(...)
+    pattern-sinks:
+      # The whole filter comes from the request: `Product.find(req.body.filter)`.
+      - requires: OBJ
+        patterns:
+          - pattern-either:
+              - patterns:
+                  - pattern: $COLL.$METHOD($FILTER, ...)
+                  - metavariable-regex:
+                      metavariable: $METHOD
+                      regex: ^(find|findOne|findOneAndDelete|findOneAndRemove|deleteOne|deleteMany|remove|countDocuments|count|exists)$
+              # Update methods always take (filter, update). Requiring a non-string second
+              # argument keeps `crypto.createHash(...).update(data[, 'utf8'])` out.
+              - patterns:
+                  - pattern: $COLL.$METHOD($FILTER, $UPD, ...)
+                  - pattern-not: $COLL.$METHOD($FILTER, "...", ...)
+                  - metavariable-regex:
+                      metavariable: $METHOD
+                      regex: ^(findOneAndUpdate|findOneAndReplace|update|updateOne|updateMany|replaceOne)$
+          # Only a bare identifier or member chain. metavariable-pattern would match identifiers
+          # *inside* an object literal or callback, so anchor with a regex instead.
+          - metavariable-regex:
+              metavariable: $FILTER
+              regex: ^[\w$]+(\s*(\.[\w$]+|\[[^\[\]]+\]))*$
+          - focus-metavariable: $FILTER
+      # A filter field holds request data: `{ password: req.body.password }`. A string cast
+      # (`String(x)`, a template) stops operator objects, so it is not a sink here.
+      - requires: OBJ
+        patterns:
+          - pattern: '$COLL.$METHOD({..., $K: $V, ...}, ...)'
+          - metavariable-regex:
+              metavariable: $METHOD
+              regex: ^(find|findOne|findOneAndUpdate|findOneAndDelete|findOneAndReplace|findOneAndRemove|update|updateOne|updateMany|replaceOne|deleteOne|deleteMany|remove|countDocuments|count|exists)$
+          # SQL ORMs (Sequelize, TypeORM) take `{ where: ... }` and use symbol operators.
+          - metavariable-regex:
+              metavariable: $K
+              regex: ^(?!["']?(where|\$where)["']?$)
+          - metavariable-pattern:
+              metavariable: $V
+              patterns:
+                - pattern-not: String(...)
+                - pattern-not: $X.toString()
+                - pattern-not: '`...`'
+                - pattern-not: $A + $B
+          - focus-metavariable: $V
+      - requires: STR
+        patterns:
+          - pattern: '{..., $KEY: $JS, ...}'
+          - metavariable-regex:
+              metavariable: $KEY
+              regex: ^["']?\$where["']?$
+          - focus-metavariable: $JS

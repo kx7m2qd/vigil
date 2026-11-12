@@ -1,0 +1,467 @@
+[
+  {
+    "id": "GHSA-f2mf-q878-gh58",
+    "cve": "CVE-2026-21892",
+    "package": "pip:parsl",
+    "cwe": [
+      "CWE-89"
+    ],
+    "summary": "Parsl Monitoring Visualization Vulnerable to SQL Injection",
+    "advisory": "https://github.com/advisories/GHSA-f2mf-q878-gh58",
+    "repo": "Parsl/parsl",
+    "path": "parsl/monitoring/visualization/views.py",
+    "rule": "py-sql-injection",
+    "vulnerable": {
+      "commit": "2c37ae3e75137095302dac5f9cd3ca956cb51a47",
+      "sha256": "800abb92efc22fbce5c3686c808620a8edd7d44ef1ac5ab3cb1454c850e58476",
+      "line": 148
+    },
+    "fixed": {
+      "commit": "013a928461e70f38a33258bd525a351ed828e974",
+      "sha256": "d4c8e40bb31b4bdb3d299ad3e7690e1578ef438ac9dfab16021fad115807ef3c",
+      "line": 149
+    }
+  },
+  {
+    "id": "GHSA-pwh4-6r3m-j2rf",
+    "cve": "CVE-2025-55156",
+    "package": "pip:pyload-ng",
+    "cwe": [
+      "CWE-89"
+    ],
+    "summary": "PyLoad vulnerable to SQL Injection via API /json/add_package in add_links parameter",
+    "advisory": "https://github.com/advisories/GHSA-pwh4-6r3m-j2rf",
+    "repo": "pyload/pyload",
+    "path": "src/pyload/core/database/file_database.py",
+    "rule": "py-sql-injection",
+    "vulnerable": {
+      "commit": "a123accec0618798db77f9f5bc66838b741d9f58",
+      "sha256": "ab8f3ed7344ab99ff324da4c6d558b6c5fbba490c10abaff42da3994fbb4a3d3",
+      "line": 271
+    },
+    "fixed": {
+      "commit": "134edcdf6e2a10c393743c254da3d9d90b74258f",
+      "sha256": "2b47a1947a2ebcef611a72f649482dbbe45cafc3333118d5b873582c07ba4a83",
+      "line": 271
+    }
+  },
+  {
+    "id": "GHSA-rh5m-2482-966c",
+    "cve": "CVE-2026-32714",
+    "package": "pip:scitokens",
+    "cwe": [
+      "CWE-89"
+    ],
+    "summary": "SciTokens is vulnerable to SQL Injection in KeyCache",
+    "advisory": "https://github.com/advisories/GHSA-rh5m-2482-966c",
+    "repo": "scitokens/scitokens",
+    "path": "src/scitokens/utils/keycache.py",
+    "rule": "py-sql-injection",
+    "vulnerable": {
+      "commit": "66b075c35da18f8364276553513a53c596b4b8e3",
+      "sha256": "b0297b9840bf2d07eb6a2e305337115f5e455249256aa4e2950eb43cc4e348aa",
+      "line": 83
+    },
+    "fixed": {
+      "commit": "3dba108853f2f4a6c0f2325c03779bf083c41cf2",
+      "sha256": "40d4a893379bb1b7c764457a19591355efc8db25d157f54e9dc321554d9e4145",
+      "line": 83
+    }
+  },
+  {
+    "id": "GHSA-vghm-8cjp-hjw6",
+    "cve": "CVE-2018-25088",
+    "package": "pip:postgraas-server",
+    "cwe": [
+      "CWE-89"
+    ],
+    "summary": "postgraas-server vulnerable to SQL injection",
+    "advisory": "https://github.com/advisories/GHSA-vghm-8cjp-hjw6",
+    "repo": "blue-yonder/postgraas_server",
+    "path": "postgraas_server/backends/postgres_cluster/postgres_cluster_driver.py",
+    "rule": "py-sql-injection",
+    "vulnerable": {
+      "commit": "bd4f1b88e7008a3abd4dbe05c26e7b20bbb99649",
+      "sha256": "a481aa04eafb44bc9cb885893d20f629de6c966e7fbaac7a5946fe8cd045a49e",
+      "line": 22
+    },
+    "fixed": {
+      "commit": "7cd8d016edc74a78af0d81c948bfafbcc93c937c",
+      "sha256": "fe845c356dd2a4ab4f40df39a42b39585996f5ba843f15d137d2bf9cdefa2d82",
+      "line": 23
+    }
+  },
+  {
+    "id": "GHSA-6497-prx7-gpmq",
+    "cve": "CVE-2025-69662",
+    "package": "pip:geopandas",
+    "cwe": [
+      "CWE-89",
+      "CWE-202"
+    ],
+    "summary": "geopandas SQL Injection Vulnerability in to_postgis() Allows Information Disclosure",
+    "advisory": "https://github.com/advisories/GHSA-6497-prx7-gpmq",
+    "repo": "geopandas/geopandas",
+    "path": "geopandas/io/sql.py",
+    "rule": "py-sql-injection",
+    "vulnerable": {
+      "commit": "c301579e0ac4034c19bece63c08bf628613700b4",
+      "sha256": "859f3c7d222d2ed55b98e343c4a6ea54505818e0e20da28734ba2d76f211cc15",
+      "line": 434
+    },
+    "fixed": {
+      "commit": "6aa8ef14ffdee4ba1044349ab948e1a1fbfaf419",
+      "sha256": "c3d0c3647c6caf7b104a62c3c5a85366194aae7aa62783c30acb501959ff3dcf",
+      "line": 435
+    }
+  },
+  {
+    "id": "GHSA-h6m6-jj8v-94jj",
+    "cve": "CVE-2024-5225",
+    "package": "pip:litellm",
+    "cwe": [
+      "CWE-89"
+    ],
+    "summary": "SQL injection in litellm",
+    "advisory": "https://github.com/advisories/GHSA-h6m6-jj8v-94jj",
+    "repo": "BerriAI/litellm",
+    "path": "litellm/proxy/proxy_server.py",
+    "rule": "py-sql-injection",
+    "vulnerable": {
+      "commit": "1ec2ba186f9ad56049397ed3cef3dd2ce119c8d1",
+      "sha256": "b45bfcc83823fb71f5dec49cc0110f56e2a8dfe89e549fc0943517e84860a980",
+      "line": 8706
+    },
+    "fixed": {
+      "commit": "f75c15d6cd535aa78014378ad532de1df6be2f56",
+      "sha256": "e3cc3fd8bd017c135403f7071cfae6143e2a7a3c92ec49f227d21cd0173c8441",
+      "line": 8702
+    }
+  },
+  {
+    "id": "GHSA-hj3w-wrh4-44vp",
+    "cve": "CVE-2024-52803",
+    "package": "pip:llamafactory",
+    "cwe": [
+      "CWE-78",
+      "CWE-79"
+    ],
+    "summary": "LLama Factory Remote OS Command Injection Vulnerability",
+    "advisory": "https://github.com/advisories/GHSA-hj3w-wrh4-44vp",
+    "repo": "hiyouga/LLaMA-Factory",
+    "path": "src/llamafactory/webui/runner.py",
+    "rule": "py-command-injection",
+    "vulnerable": {
+      "commit": "c8f199881aa954025f9b022f0f6b4fa7136466ad",
+      "sha256": "b8cbcfb48e694216c4f604fe8fc902213f3760c6faccaf8312181ff66b223b93",
+      "line": 323
+    },
+    "fixed": {
+      "commit": "b3aa80d54a67da45e9e237e349486fb9c162b2ac",
+      "sha256": "692179218bf8bdab1f27fbd6b7e8bd1db8fe41dae88af4b2160903c3f0a537cf",
+      "line": 323
+    }
+  },
+  {
+    "id": "GHSA-7pc3-pr3q-58vg",
+    "cve": "CVE-2024-34073",
+    "package": "pip:sagemaker",
+    "cwe": [
+      "CWE-78"
+    ],
+    "summary": "sagemaker-python-sdk Command Injection vulnerability",
+    "advisory": "https://github.com/advisories/GHSA-7pc3-pr3q-58vg",
+    "repo": "aws/sagemaker-python-sdk",
+    "path": "src/sagemaker/serve/save_retrive/version_1_0_0/save/utils.py",
+    "rule": "py-command-injection",
+    "vulnerable": {
+      "commit": "d27836eab1575d90db676ab2667b4816eaf45af0",
+      "sha256": "2f8c29cde2cf1b76c3d023fbd73ff9b9ebcec6ac01d524500d0bafef3afd87b2",
+      "line": 104
+    },
+    "fixed": {
+      "commit": "2d873d53f708ea570fc2e2a6974f8c3097fe9df5",
+      "sha256": "d109b3b74c4e72f18a7b13f4c92f980ddbdfd9a187ffbc6360379be1ee661044",
+      "line": 105
+    }
+  },
+  {
+    "id": "GHSA-69w3-r845-3855",
+    "cve": "CVE-2026-1839",
+    "package": "pip:transformers",
+    "cwe": [
+      "CWE-502"
+    ],
+    "summary": "HuggingFace Transformers allows for arbitrary code execution in the `Trainer` class",
+    "advisory": "https://github.com/advisories/GHSA-69w3-r845-3855",
+    "repo": "huggingface/transformers",
+    "path": "src/transformers/trainer.py",
+    "rule": "py-unsafe-deserialization",
+    "vulnerable": {
+      "commit": "2aa7b652811b3a2fe92bd586a2bbd4f9cde19a57",
+      "sha256": "8b4753e8a0aec6fe8c2e72e1033b86786a9c4110425a47fb600c8de7545cd8a3",
+      "line": 3059
+    },
+    "fixed": {
+      "commit": "03c8082ba4594c9b8d6fe190ca9bed0e5f8ca396",
+      "sha256": "ffa1abf29bedbcf866a5c48ea4bc2a2e94044f2498fc08459f1c489776650269",
+      "line": 3060
+    }
+  },
+  {
+    "id": "GHSA-vqxf-v2gg-x3hc",
+    "cve": "CVE-2026-24009",
+    "package": "pip:docling-core",
+    "cwe": [
+      "CWE-502"
+    ],
+    "summary": "docling-core vulnerable to Remote Code Execution via unsafe PyYAML usage",
+    "advisory": "https://github.com/advisories/GHSA-vqxf-v2gg-x3hc",
+    "repo": "docling-project/docling-core",
+    "path": "docling_core/types/doc/document.py",
+    "rule": "py-unsafe-deserialization",
+    "vulnerable": {
+      "commit": "ec0978652ff0f19356d8661f7e59a0f98a5b248d",
+      "sha256": "1d92d230815ada82f1d0a09b787452f3e6367738901e8f92d69659096797b36f",
+      "line": 4357
+    },
+    "fixed": {
+      "commit": "3e8d628eeeae50f0f8f239c8c7fea773d065d80c",
+      "sha256": "585fa8ae37e8510be28eb57d92bbc6e5ee763b7970e0a8ccc0e1e749582ed325",
+      "line": 4357
+    }
+  },
+  {
+    "id": "GHSA-jg22-mg44-37j8",
+    "cve": "CVE-2026-34993",
+    "package": "pip:aiohttp",
+    "cwe": [
+      "CWE-502"
+    ],
+    "summary": "AIOHTTP is Vulnerable to Deserialization of Untrusted Data",
+    "advisory": "https://github.com/advisories/GHSA-jg22-mg44-37j8",
+    "repo": "aio-libs/aiohttp",
+    "path": "aiohttp/cookiejar.py",
+    "rule": "py-unsafe-deserialization",
+    "vulnerable": {
+      "commit": "4f12a6641e3db60aa35c60c9db61b45c89176c00",
+      "sha256": "8f3eb4b4208edbaeedea389f45b88b06704ed96315fb8a6f27b2bfd23d0ffa13",
+      "line": 122
+    },
+    "fixed": {
+      "commit": "dcf40f30637e8752c76781cf6703b5a236749a00",
+      "sha256": "2a7a33f8d2db44f52557dcf4d70bf92dba02d29bc8955a77a7bf08a74f6816cc",
+      "line": 195
+    }
+  },
+  {
+    "id": "GHSA-ffwf-47x2-jpr8",
+    "cve": "CVE-2022-3971",
+    "package": "npm:matrix-appservice-irc",
+    "cwe": [
+      "CWE-89"
+    ],
+    "summary": "Matrix-appservice-irc vulnerable to sql injection via roomIds argument",
+    "advisory": "https://github.com/advisories/GHSA-ffwf-47x2-jpr8",
+    "repo": "matrix-org/matrix-appservice-irc",
+    "path": "src/datastore/postgres/PgDataStore.ts",
+    "rule": "js-sql-injection",
+    "vulnerable": {
+      "commit": "8fdffdd2d5649a0a16076e2a6c6b40ffe2cbd732",
+      "sha256": "785d161af8dc272d85ff13f6aca61da1019f14a7a6e6b93e9fbc1221ace0b25e",
+      "line": 665
+    },
+    "fixed": {
+      "commit": "179313a37f06b298150edba3e2b0e5a73c1415e7",
+      "sha256": "96dcc89c80b44343ee89947d783aca8e8ee41ea9702d63c4525ecead76ba2adf",
+      "line": 664
+    }
+  },
+  {
+    "id": "GHSA-4948-f92q-f432",
+    "cve": "CVE-2026-41640",
+    "package": "npm:@nocobase/database",
+    "cwe": [
+      "CWE-89"
+    ],
+    "summary": "@nocobase/database has SQL Injection via String Concatenation through Recursive Eager Loading",
+    "advisory": "https://github.com/advisories/GHSA-4948-f92q-f432",
+    "repo": "nocobase/nocobase",
+    "path": "packages/core/database/src/eager-loading/eager-loading-tree.ts",
+    "rule": "js-sql-injection",
+    "vulnerable": {
+      "commit": "35f3678d53e73e33942ed9b457278f6aaef6f17f",
+      "sha256": "7744ad02c5d2383efd566ae7f75329d46794b4b3e68886fc721ad87de113b578",
+      "line": 77
+    },
+    "fixed": {
+      "commit": "202e2b8efe44ba90adbf1087f6f70881ff947604",
+      "sha256": "27ab48a674238368730b823c9de0cfcf1b6dcd6df5db6438fe15f8c51a09c3ad",
+      "line": 79
+    }
+  },
+  {
+    "id": "GHSA-4x45-gxvp-6283",
+    "cve": "CVE-2026-59960",
+    "package": "npm:@argos-ci/core",
+    "cwe": [
+      "CWE-78"
+    ],
+    "summary": "@argos-ci/core: CI Branch Name OS Command Injection",
+    "advisory": "https://github.com/advisories/GHSA-4x45-gxvp-6283",
+    "repo": "argos-ci/argos-javascript",
+    "path": "packages/core/src/ci-environment/git.ts",
+    "rule": "js-command-injection",
+    "vulnerable": {
+      "commit": "1787fe78cba46f408493e02114150f2d73f47fa4",
+      "sha256": "09a763829bec91457a5b7f7945f1697111f4a6c31005fecd4ddcd8286b2c91c6",
+      "line": 67
+    },
+    "fixed": {
+      "commit": "8355f3af3be3f4fe361d58a688d21535cf672717",
+      "sha256": "c235fad71a553c0c1ae279af510f951e24398d9aefcbf8e6f1bd3de56a1af7a7",
+      "line": 67
+    }
+  },
+  {
+    "id": "GHSA-5xpp-75jx-m839",
+    "cve": "CVE-2026-50289",
+    "package": "npm:systeminformation",
+    "cwe": [
+      "CWE-78"
+    ],
+    "summary": "systeminformation: OS command injection in networkInterfaces() via interfaces(5) source-directive path on Linux",
+    "advisory": "https://github.com/advisories/GHSA-5xpp-75jx-m839",
+    "repo": "sebhildebrandt/systeminformation",
+    "path": "lib/network.js",
+    "rule": "js-command-injection",
+    "vulnerable": {
+      "commit": "da1cbf5eb09907cf5c3431f4c9ea441b7a227617",
+      "sha256": "68451aef799f3391248045bac63142fdf1f623b1f9af74ab6f44f92023c3d288",
+      "line": 552
+    },
+    "fixed": {
+      "commit": "bbfddde48672d0ee124fefdb3cb4442fd9dd4f03",
+      "sha256": "e719ec1f8a5cbb757eb04a40c5879eef70f0ae3d01e080674a6ee1348b2d9d4d",
+      "line": 552
+    }
+  },
+  {
+    "id": "GHSA-79wm-x847-7cvg",
+    "cve": "CVE-2026-73222",
+    "package": "npm:claude-code-templates",
+    "cwe": [
+      "CWE-78",
+      "CWE-306",
+      "CWE-352"
+    ],
+    "summary": "Claude Code Templates: Unauthenticated OS command injection (RCE) in Claude Code Studio server (--studio)",
+    "advisory": "https://github.com/advisories/GHSA-79wm-x847-7cvg",
+    "repo": "davila7/claude-code-templates",
+    "path": "cli-tool/src/sandbox-server.js",
+    "rule": "js-command-injection",
+    "vulnerable": {
+      "commit": "acdb5893412a81eaec9862ee24a4613bf296ab45",
+      "sha256": "e2c24dcf02b90e5056c2b7065ce46027ef02139991117ee70f589a3a971e974d",
+      "line": 214
+    },
+    "fixed": {
+      "commit": "bc4618b07232633c1c0aac12a43e436268d31783",
+      "sha256": "2414d562c0714689978808349499af8cadf7cf39a28a534194f2ff40954aa25e",
+      "line": 245
+    }
+  },
+  {
+    "id": "GHSA-2mf3-mr2r-r4vf",
+    "cve": null,
+    "package": "npm:@rhinostone/swig",
+    "cwe": [
+      "CWE-22"
+    ],
+    "summary": "@rhinostone/swig: arbitrary local file read via include/extends path traversal",
+    "advisory": "https://github.com/advisories/GHSA-2mf3-mr2r-r4vf",
+    "repo": "gina-io/swig",
+    "path": "packages/swig-core/lib/loaders/filesystem.js",
+    "rule": "js-path-traversal",
+    "vulnerable": {
+      "commit": "a617cbf5f8c3cd5883d51ee4ef72d9d0523a2407",
+      "sha256": "3947c8bbbbc6c5c564c3f6c0daa02db6d6048eca72b5518926b75224b529ff23",
+      "line": 34
+    },
+    "fixed": {
+      "commit": "381bdc305e0b10e45368d56324328b9b4f7017fc",
+      "sha256": "05751e3a718f51cc5ffd1db8181006c01c3b586b9e8dc7b96724a45014ec69ad",
+      "line": 36
+    }
+  },
+  {
+    "id": "GHSA-rxjr-6c9q-h67x",
+    "cve": "CVE-2026-63188",
+    "package": "npm:@logto/tunnel",
+    "cwe": [
+      "CWE-22"
+    ],
+    "summary": "logto-tunnel serves files outside --experience-path via path traversal",
+    "advisory": "https://github.com/advisories/GHSA-rxjr-6c9q-h67x",
+    "repo": "logto-io/logto",
+    "path": "packages/tunnel/src/commands/tunnel/utils.ts",
+    "rule": "js-path-traversal",
+    "vulnerable": {
+      "commit": "021381237511bc0d42f81d65df8b036b01f40547",
+      "sha256": "26d6670b2c5fb5ebc2f12ef3e81e4d8dcf8b368ae6e6c3e6a3f64a2cd875c987",
+      "line": 55
+    },
+    "fixed": {
+      "commit": "5686815955534f803d3d50738259efd0f741e62c",
+      "sha256": "02f87ab4c0f943fd36dc4d66cc341f168ed26ace7fe83b09f6a917ea3efbc5ca",
+      "line": 56
+    }
+  },
+  {
+    "id": "GHSA-88pr-878c-24wf",
+    "cve": null,
+    "package": "npm:flowise-components",
+    "cwe": [
+      "CWE-22",
+      "CWE-73"
+    ],
+    "summary": "Flowise: Authenticated arbitrary file write in the `S3 Directory` document loader via unsanitized S3 object keys                                                                                                  ",
+    "advisory": "https://github.com/advisories/GHSA-88pr-878c-24wf",
+    "repo": "FlowiseAI/Flowise",
+    "path": "packages/components/nodes/documentloaders/S3Directory/S3Directory.ts",
+    "rule": "js-path-traversal",
+    "vulnerable": {
+      "commit": "d07186844263bad057008863037466aff7c3390f",
+      "sha256": "477e3c8d5a9960a1485a6d9efbeb1299c505e2c97c49f87be2589fdbcc227844",
+      "line": 191
+    },
+    "fixed": {
+      "commit": "571b5d6218b1c129588ac625c8f20e30905a67cb",
+      "sha256": "c4b433146a3851aeb8a23ef0f48d229026d8473b197c691c5bfbcc985527a89f",
+      "line": 192
+    }
+  },
+  {
+    "id": "GHSA-hfhx-w8p8-4hc7",
+    "cve": "CVE-2026-73307",
+    "package": "npm:@budibase/server",
+    "cwe": [
+      "CWE-918"
+    ],
+    "summary": "Budibase: SSRF via bare fetch() in uploadUrl during AI table generation",
+    "advisory": "https://github.com/advisories/GHSA-hfhx-w8p8-4hc7",
+    "repo": "Budibase/budibase",
+    "path": "packages/server/src/utilities/fileUtils.ts",
+    "rule": "js-ssrf",
+    "vulnerable": {
+      "commit": "60c8ca920747a925cd08259e91be10898c1280ef",
+      "sha256": "d8f586a574a1b28481aa7f9ed61c0ca0d0d78c73cea94fb0bd44fbf50b78e8e0",
+      "line": 23
+    },
+    "fixed": {
+      "commit": "72e602d68daeebe3b95b0ed87acd351a38e327d7",
+      "sha256": "e9558046cd26466dac95858926ae60c055f3ee9e2632a84a5aa7137286d6909c",
+      "line": 22
+    }
+  }
+]

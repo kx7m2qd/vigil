@@ -1,0 +1,66 @@
+rules:
+  - id: js-prototype-pollution
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      An object key path comes from the request (prototype pollution). With a key of `__proto__` or
+      `constructor`, `obj[a][b] = v` writes onto `Object.prototype`, so every object in the
+      process gains that property: attackers use it to bypass checks like `if (user.isAdmin)`, or
+      to reach remote code execution through template engines and `child_process` options. Reject
+      `__proto__`, `constructor` and `prototype` keys, check `Object.hasOwn`, or store
+      user-keyed data in a `Map` or an `Object.create(null)` object.
+    metadata:
+      title: Prototype pollution
+      cwe: ["CWE-1321: Improperly Controlled Modification of Object Prototype Attributes ('Prototype Pollution')"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: medium
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+      # Opengrep drops taint through destructuring in for-of heads
+      # (`for (const [k, v] of Object.entries(req.body))`), so the loop variables are sources.
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern-inside: |
+                  for (const [$K, $V] of <... $REQ.$P ...>) {...}
+              - pattern-inside: |
+                  for (let [$K, $V] of <... $REQ.$P ...>) {...}
+          - metavariable-regex:
+              metavariable: $P
+              regex: ^(query|body|params|headers|cookies)$
+          - pattern-either:
+              - pattern: $K
+              - pattern: $V
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: Number(...)
+          - pattern: parseInt(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              # Two levels deep: obj[userKey][userKey2] = v reaches Object.prototype.
+              - pattern: $O[$K][$K2] = $V
+              - pattern: $O[$K][$K2][$K3] = $V
+              # Path setters that walk "a.b.c" / ["a","b"] into nested objects.
+              - pattern: _.set($OBJ, $K, ...)
+              - pattern: _.setWith($OBJ, $K, ...)
+              - pattern: lodash.set($OBJ, $K, ...)
+              - pattern: setValue($OBJ, $K, ...)
+              - pattern: dotProp.set($OBJ, $K, ...)
+              - pattern: objectPath.set($OBJ, $K, ...)
+              - pattern: dset($OBJ, $K, ...)
+          - focus-metavariable: $K

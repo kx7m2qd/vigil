@@ -1,0 +1,90 @@
+rules:
+  - id: py-trust-boundary
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Request data is written into the server-side session where the app keeps trusted state: either
+      the attacker picks the session key (`session[name] = ...`), or their value goes straight into an
+      identity or privilege key (`session["user_id"] = request.form["uid"]`). Code that later reads the
+      session treats these values as already checked, so an attacker can overwrite `user_id`, set
+      `role`/`is_admin`, or log in as someone else. Write session keys from fixed names only, and set
+      identity or privilege keys from values your own code verified (the user you looked up after
+      checking the password, the role stored in your database), never from the request.
+    metadata:
+      title: Trust boundary violation (request data in trusted session state)
+      cwe: ["CWE-501: Trust Boundary Violation"]
+      owasp: ["A04:2021 - Insecure Design"]
+      confidence: medium
+    mode: taint
+    options:
+      # Only the raw request value counts. A value that went through a lookup
+      # (`User.query.filter_by(name=form_name).first().id`) is the app's own data, not the request's.
+      taint_assume_safe_functions: true
+    pattern-sources:
+      # Routing-only attributes are decided by the URL map, not free attacker text.
+      - patterns:
+          - pattern: flask.request.$ATTR
+          - metavariable-regex:
+              metavariable: $ATTR
+              regex: ^(?!(path|full_path|script_root|url_rule|endpoint|method|blueprint|blueprints)$)
+      - patterns:
+          - pattern-inside: |
+              def $VIEW($REQ, ...):
+                ...
+          - pattern-either:
+              - pattern: $REQ.GET
+              - pattern: $REQ.POST
+              - pattern: $REQ.COOKIES
+              - pattern: $REQ.headers
+              - pattern: $REQ.body
+      # The request handed whole to a wrapper (`wrapper(request).get_form_parameter(...)`).
+      - pattern: $WRAP(flask.request)
+    pattern-propagators:
+      # Re-encoding or tidying the same text keeps it attacker-controlled.
+      - patterns:
+          - pattern: $E
+          - pattern-either:
+              - pattern: str($X, ...)
+              - pattern: bytes($X, ...)
+              - pattern: int($X, ...)
+              - pattern: urllib.parse.unquote($X, ...)
+              - pattern: urllib.parse.unquote_plus($X, ...)
+              - pattern: base64.$B($X, ...)
+              - pattern: html.unescape($X)
+              # HTML-escaping changes how the text renders, not who chose it.
+              - patterns:
+                  - pattern: $F($X, ...)
+                  - metavariable-regex:
+                      metavariable: $F
+                      regex: (?i).*escape
+              - pattern: $S.join($X)
+              - patterns:
+                  - pattern: $X.$M(...)
+                  - metavariable-regex:
+                      metavariable: $M
+                      regex: ^(get|getlist|get_\w+|strip|lstrip|rstrip|lower|upper|casefold|title|decode|encode|replace|removeprefix|removesuffix)$
+        from: $X
+        to: $E
+    pattern-sinks:
+      # The attacker chooses which session key is written.
+      - patterns:
+          - pattern-either:
+              - pattern: flask.session[$K] = $V
+              - pattern: flask.session.setdefault($K, ...)
+              - pattern: $REQ.session[$K] = $V
+          - focus-metavariable: $K
+      # A whole request dict merged into the session: every key is attacker-chosen.
+      - patterns:
+          - pattern-either:
+              - pattern: flask.session.update($D, ...)
+              - pattern: $REQ.session.update($D, ...)
+          - focus-metavariable: $D
+      # A request value stored under an identity or privilege key.
+      - patterns:
+          - pattern-either:
+              - pattern: flask.session["$KEY"] = $V
+              - pattern: $REQ.session["$KEY"] = $V
+          - metavariable-regex:
+              metavariable: $KEY
+              regex: (?i)^_?(\w+_)?(user|userid|user_?id|uid|username|user_?name|role|roles|admin|is_?admin|staff|is_?staff|superuser|is_?superuser|perms?|permissions?|groups?|auth|authenticated|is_?authenticated|logged_?in|account|account_?id|tenant|tenant_?id|org|org_?id|privileges?|access_?level)$
+          - focus-metavariable: $V

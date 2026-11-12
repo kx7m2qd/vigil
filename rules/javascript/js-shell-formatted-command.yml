@@ -1,0 +1,52 @@
+rules:
+  - id: js-shell-formatted-command
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A shell command is built with a template literal or `+` and run with `exec`/`execSync`, which
+      go through `/bin/sh`. If any interpolated value can come from a caller, a request, a file name
+      or an environment variable, characters like `;`, `|` or `$(...)` run extra commands. Use
+      `execFile`/`spawn` with an argument array: `execFileSync('git', ['merge-base', head, base])`.
+    metadata:
+      title: Shell command built with string interpolation
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: medium
+    options:
+      symbolic_propagation: true
+    mode: taint
+    pattern-sources:
+      - pattern-either:
+          - pattern: "`...${$X}...`"
+          - pattern: "'...' + $X"
+          - pattern: "$X + '...'"
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: require('$MOD').$FN($CMD, ...)
+              - patterns:
+                  - pattern-inside: |
+                      import * as $CP from '$MOD';
+                      ...
+                  - pattern: $CP.$FN($CMD, ...)
+              - patterns:
+                  - pattern-inside: |
+                      import $CP from '$MOD';
+                      ...
+                  - pattern: $CP.$FN($CMD, ...)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          import { $FN } from '$MOD';
+                          ...
+                      - pattern-inside: |
+                          const { $FN } = require('$MOD');
+                          ...
+                  - pattern: $FN($CMD, ...)
+          - metavariable-regex:
+              metavariable: $MOD
+              regex: ^(node:)?child_process$
+          - metavariable-regex:
+              metavariable: $FN
+              regex: ^(exec|execSync)$
+          - focus-metavariable: $CMD

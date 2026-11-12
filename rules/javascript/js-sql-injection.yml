@@ -1,0 +1,42 @@
+rules:
+  - id: js-sql-injection
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Request data is concatenated into a SQL string. An attacker can change the query to read or
+      modify any data. Pass values as bound parameters (`db.query('... WHERE id = $1', [id])`,
+      Prisma `$queryRaw` tagged templates, Knex bindings) instead of building the SQL string.
+    metadata:
+      title: SQL injection
+      cwe: ["CWE-89: Improper Neutralization of Special Elements used in an SQL Command"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: high
+      severity: critical
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+    pattern-sanitizers:
+      - pattern: parseInt(...)
+      - pattern: Number(...)
+      - pattern: $X.escape(...)
+      - pattern: $X.escapeId(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $DB.query($SQL, ...)
+              - pattern: $DB.execute($SQL, ...)
+              - pattern: $DB.raw($SQL, ...)
+              - pattern: $DB.whereRaw($SQL, ...)
+              - pattern: $DB.$queryRawUnsafe($SQL, ...)
+              - pattern: $DB.$executeRawUnsafe($SQL, ...)
+          - focus-metavariable: $SQL

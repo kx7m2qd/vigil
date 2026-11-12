@@ -1,0 +1,35 @@
+rules:
+  - id: py-command-injection
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Request data reaches a shell command. An attacker can inject `;`, `|` or `$(...)` and run
+      arbitrary commands on the server. Call `subprocess.run([...])` with an argument list and
+      without `shell=True`, and validate the input against an allowlist.
+    metadata:
+      title: Command injection
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: high
+      severity: critical
+    mode: taint
+    pattern-sources:
+      - pattern: flask.request.$ATTR
+      - pattern: flask.request.$METHOD(...)
+      - patterns:
+          - pattern-inside: |
+              def $VIEW($REQ, ...):
+                ...
+          - pattern-either:
+              - pattern: $REQ.GET
+              - pattern: $REQ.POST
+    pattern-sanitizers:
+      - pattern: int(...)
+      - pattern: shlex.quote(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: os.system($CMD)
+              - pattern: os.popen($CMD, ...)
+              - pattern: subprocess.$FN($CMD, ..., shell=True, ...)
+          - focus-metavariable: $CMD

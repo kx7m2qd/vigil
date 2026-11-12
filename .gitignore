@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vigil-cache/
+*.log
+.DS_Store
+.serena/
+
+# Local Claude Code / Headroom state
+.claude/

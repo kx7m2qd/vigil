@@ -1,0 +1,6 @@
+# Passed to gitleaks with --config so a scanned repo's own .gitleaks.toml (which
+# could allowlist its secrets) is never used. Gitleaks' built-in rules, unchanged.
+title = "vigil"
+
+[extend]
+useDefault = true

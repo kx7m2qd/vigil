@@ -1,0 +1,115 @@
+rules:
+  - id: py-xss
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Request data is written into an HTML response without escaping. An attacker can send
+      `<script>` or an `onerror=` attribute that runs in the victim's browser with their session
+      (cross-site scripting), stealing cookies or acting as them. Render through an autoescaped
+      template (`render_template` / Django templates) or escape the value with `markupsafe.escape()`
+      / `html.escape()` first; never wrap request data in `Markup()`, `mark_safe()` or
+      `render_template_string()`, and return JSON with `jsonify()` instead of building strings.
+    metadata:
+      title: Cross-site scripting (XSS)
+      cwe: ["CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: medium
+    mode: taint
+    pattern-sources:
+      # Routing-only attributes are decided by the URL map, not free attacker text.
+      - patterns:
+          - pattern: flask.request.$ATTR
+          - metavariable-regex:
+              metavariable: $ATTR
+              regex: ^(?!(path|full_path|script_root|url_rule|endpoint|method|blueprint|blueprints)$)
+      # The request handed whole to a wrapper (`RequestWrapper(request).get_form_parameter(...)`).
+      - pattern: $WRAP(flask.request)
+      - patterns:
+          - pattern-inside: |
+              def $VIEW($REQ, ...):
+                ...
+          - pattern-either:
+              - pattern: $REQ.GET
+              - pattern: $REQ.POST
+              - pattern: $REQ.COOKIES
+              - pattern: $REQ.headers
+              - pattern: $REQ.body
+    pattern-sanitizers:
+      - pattern: html.escape(...)
+      - pattern: markupsafe.escape(...)
+      - pattern: flask.escape(...)
+      - pattern: django.utils.html.escape(...)
+      - pattern: django.utils.html.format_html(...)
+      - pattern: bleach.clean(...)
+      - pattern: flask.jsonify(...)
+      # Files, redirects and process output: not HTML built from the input (other rules cover
+      # path traversal and command injection).
+      - pattern: flask.send_file(...)
+      - pattern: flask.send_from_directory(...)
+      - pattern: flask.redirect(...)
+      - pattern: subprocess.$RUN(...)
+      - pattern: json.dumps(...)
+      - pattern: int(...)
+      - pattern: float(...)
+      - patterns:
+          - pattern: $FN(...)
+          - metavariable-regex:
+              metavariable: $FN
+              regex: (?i).*(escape|sanitize)
+    pattern-sinks:
+      # A string returned from a Flask view is sent as text/html.
+      - patterns:
+          - pattern-inside: |
+              @$APP.$ROUTE(...)
+              def $F(...):
+                ...
+          - metavariable-regex:
+              metavariable: $ROUTE
+              regex: ^(route|get|post|put|patch|delete)$
+          - pattern-either:
+              - pattern: return $X
+              - pattern: return $X, ...
+          # Dicts and lists are serialized to JSON.
+          - pattern-not: return {...}
+          - pattern-not: return [...]
+          - pattern-not: return {...}, ...
+          # Autoescaped templates, and response objects whose body is checked as its own sink below
+          # (a sanitizer would also hide `Markup(...)` passed into them).
+          - metavariable-pattern:
+              metavariable: $X
+              patterns:
+                - pattern-not: flask.render_template(...)
+                - pattern-not: django.shortcuts.render(...)
+                - pattern-not: flask.make_response(...)
+                - pattern-not: flask.Response(...)
+                - pattern-not: django.http.HttpResponse(...)
+          - pattern-not-inside: |
+              $X = flask.render_template(...)
+              ...
+              return $X
+          - pattern-not-inside: |
+              $X = flask.make_response(...)
+              ...
+              return $X
+          - pattern-not-inside: |
+              $X = flask.Response(...)
+              ...
+              return $X
+          - focus-metavariable: $X
+      # Only the body; the headers dict in `make_response((body, headers))` is not HTML.
+      - patterns:
+          - pattern-either:
+              - patterns:
+                  - pattern: flask.make_response($X, ...)
+                  - pattern-not: flask.make_response(($B, $H), ...)
+                  - pattern-not: flask.make_response(($B, $S, $H), ...)
+              - pattern: flask.make_response(($X, ...))
+              - pattern: flask.Response($X, ...)
+              - pattern: flask.render_template_string($X, ...)
+              - pattern: markupsafe.Markup($X)
+              - pattern: flask.Markup($X)
+              - pattern: django.http.HttpResponse($X, ...)
+              - pattern: django.utils.safestring.mark_safe($X)
+              - pattern: starlette.responses.HTMLResponse($X, ...)
+              - pattern: fastapi.responses.HTMLResponse($X, ...)
+          - focus-metavariable: $X

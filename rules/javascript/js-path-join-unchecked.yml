@@ -1,0 +1,51 @@
+rules:
+  - id: js-path-join-unchecked
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A function argument is joined onto a base directory with `path.join`/`path.resolve` and the
+      result is never checked to stay inside that directory. If the argument can come from a request,
+      a template, an archive entry or a storage key, `../` segments or an absolute path escape the base
+      and read or overwrite arbitrary files. Use `path.basename()` for plain file names, or resolve the
+      path and reject it unless `path.relative(base, resolved)` does not start with `..` and is not
+      absolute.
+    metadata:
+      title: Path joined from a parameter without a containment check
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory"]
+      owasp: ["A01:2021 - Broken Access Control"]
+      confidence: medium
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function $F(..., $P, ...) { ... }
+              - pattern-inside: function (..., $P, ...) { ... }
+              - pattern-inside: (..., $P, ...) => $BODY
+          - focus-metavariable: $P
+    pattern-sanitizers:
+      - pattern: path.basename(...)
+      - pattern: basename(...)
+      # Express request data is js-path-traversal's, which follows it to the file access.
+      - pattern-either:
+          - pattern: $REQ.query
+          - pattern: $REQ.body
+          - pattern: $REQ.params
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: path.join($BASE, ..., $SEG, ...)
+              - pattern: path.resolve($BASE, ..., $SEG, ...)
+          - focus-metavariable: $SEG
+          # A containment check on the joined path after it is built.
+          - pattern-not-inside: |
+              $R = path.$M(...);
+              ...
+              if (<... $R.startsWith(...) ...>) $S;
+          - pattern-not-inside: |
+              $R = path.$M(...);
+              ...
+              if (<... $R.indexOf(...) ...>) $S;
+          - pattern-not-inside: |
+              $R = path.$M(...);
+              ...
+              $REL = path.relative($ROOT, $R);

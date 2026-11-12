@@ -1,0 +1,35 @@
+rules:
+  - id: py-insecure-cookie
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A cookie is sent without the `Secure` flag, so the browser also sends it over plain HTTP where
+      anyone on the network can read it and hijack the session. Pass `secure=True` (with
+      `httponly=True` and `samesite="Lax"`) to `set_cookie`, and set `SESSION_COOKIE_SECURE = True` /
+      `CSRF_COOKIE_SECURE = True` in Flask or Django settings.
+    metadata:
+      title: Cookie without the Secure flag
+      cwe: ["CWE-614: Sensitive Cookie in HTTPS Session Without 'Secure' Attribute"]
+      owasp: ["A05:2021 - Security Misconfiguration"]
+      confidence: high
+      severity: medium
+    pattern-either:
+      - pattern: $R.set_cookie(..., secure=False, ...)
+      # Flask, Django and Starlette all default to insecure. Only flag the default for cookies that
+      # look like auth, so a `theme` cookie stays quiet.
+      - patterns:
+          - pattern-either:
+              - pattern: $R.set_cookie("$NAME", ...)
+              - pattern: $R.set_cookie(..., key="$NAME", ...)
+          - pattern-not: $R.set_cookie(..., secure=$S, ...)
+          - metavariable-regex:
+              metavariable: $NAME
+              regex: (?i).*(sess|sid|token|auth|jwt|remember|csrf|xsrf|login)
+      - patterns:
+          - pattern-either:
+              - pattern: $K = False
+              - pattern: $C[$K] = False
+              - pattern: $C.update(..., $K=False, ...)
+          - metavariable-regex:
+              metavariable: $K
+              regex: ^["']?(SESSION_COOKIE_SECURE|CSRF_COOKIE_SECURE|REMEMBER_COOKIE_SECURE)["']?$

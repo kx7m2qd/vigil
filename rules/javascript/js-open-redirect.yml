@@ -1,0 +1,51 @@
+rules:
+  - id: js-open-redirect
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      The redirect target comes from the request (open redirect). Attackers send links on your
+      trusted domain that bounce victims to a phishing page, and use it to steal OAuth codes when it
+      sits on a login or callback path. Redirect only to relative paths you check (`url.startsWith('/')
+      && !url.startsWith('//')`), or look the target up in an allowlist of known URLs.
+    metadata:
+      title: Open redirect
+      cwe: ["CWE-601: URL Redirection to Untrusted Site ('Open Redirect')"]
+      owasp: ["A01:2021 - Broken Access Control"]
+      confidence: medium
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+    pattern-sanitizers:
+      # A literal prefix that pins the host (`https://host/…`) or a path (`/x…`, not `//`).
+      - patterns:
+          - pattern: '"$PREFIX" + $X'
+          - metavariable-regex:
+              metavariable: $PREFIX
+              regex: ^(https?://[^/]+/|/[^/\\])
+      - patterns:
+          - pattern: '`$PREFIX${$X}`'
+          - metavariable-regex:
+              metavariable: $PREFIX
+              regex: ^(https?://[^/]+/|/[^/\\])
+      - pattern: encodeURIComponent(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $RES.redirect($X)
+              - pattern: $RES.redirect($STATUS, $X)
+              - pattern: $RES.location($X)
+              - pattern: $RES.setHeader("=~/(?i)^location$/", $X)
+              - pattern: $RES.set("=~/(?i)^location$/", $X)
+              - pattern: '$RES.writeHead($STATUS, {..., Location: $X, ...})'
+              - pattern: '$RES.writeHead($STATUS, {..., "Location": $X, ...})'
+          - focus-metavariable: $X

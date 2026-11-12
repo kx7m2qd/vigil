@@ -1,0 +1,2 @@
+# Passed to osv-scanner with --config so a scanned repo's own osv-scanner.toml
+# (which can ignore vulnerabilities) is never used. Intentionally empty.

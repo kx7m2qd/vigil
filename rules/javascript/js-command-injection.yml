@@ -1,0 +1,77 @@
+rules:
+  - id: js-command-injection
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Request data reaches a shell command. An attacker can append `; rm -rf /` or `$(...)` and run
+      arbitrary commands on the server. Use `execFile`/`spawn` with an argument array (no shell), and
+      validate the input against an allowlist.
+    metadata:
+      title: Command injection via child_process
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: high
+      severity: critical
+    options:
+      symbolic_propagation: true
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+    pattern-sanitizers:
+      - pattern: parseInt(...)
+      - pattern: Number(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: require('$MOD').$FN($CMD, ...)
+              - patterns:
+                  - pattern-inside: |
+                      import * as $CP from '$MOD';
+                      ...
+                  - pattern: $CP.$FN($CMD, ...)
+              - patterns:
+                  - pattern-inside: |
+                      import $CP from '$MOD';
+                      ...
+                  - pattern: $CP.$FN($CMD, ...)
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          import { $FN } from '$MOD';
+                          ...
+                      - pattern-inside: |
+                          const { $FN } = require('$MOD');
+                          ...
+                  - pattern: $FN($CMD, ...)
+          - metavariable-regex:
+              metavariable: $MOD
+              regex: ^(node:)?child_process$
+          - pattern-either:
+              # exec runs its whole first argument through a shell.
+              - patterns:
+                  - metavariable-regex:
+                      metavariable: $FN
+                      regex: ^(exec|execSync)$
+                  - pattern-either:
+                      - pattern: $X.$FN($CMD, ...)
+                      - pattern: $FN($CMD, ...)
+                  - focus-metavariable: $CMD
+              # spawn/execFile with `shell: true` join the binary and its arguments into a shell line.
+              - patterns:
+                  - metavariable-regex:
+                      metavariable: $FN
+                      regex: ^(spawn|spawnSync|execFile|execFileSync)$
+                  - pattern-either:
+                      - pattern: '$X.$FN($CMD, $ARGS, {..., shell: true, ...}, ...)'
+                      - pattern: '$FN($CMD, $ARGS, {..., shell: true, ...}, ...)'
+                  - focus-metavariable: [$CMD, $ARGS]

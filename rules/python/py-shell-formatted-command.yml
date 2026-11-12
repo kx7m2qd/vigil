@@ -1,0 +1,65 @@
+rules:
+  - id: py-shell-formatted-command
+    languages: [python]
+    severity: WARNING
+    message: >-
+      A shell command is built with string formatting (f-string, `%`, `.format` or `+`) from a
+      function parameter and run through a shell (`os.system`, `os.popen`, or `subprocess` with
+      `shell=True`). If the value can come from a caller, a request, a file name or a config, characters
+      like `;`, `|` or `$(...)` run extra commands. Pass an argument list without a shell:
+      `subprocess.run(["pigar", "gen", "-f", path, cwd], check=True)`.
+    metadata:
+      title: Shell command built with string formatting
+      cwe: ["CWE-78: Improper Neutralization of Special Elements used in an OS Command"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: medium
+    mode: taint
+    options:
+      symbolic_propagation: true
+    pattern-sources:
+      # Values a caller controls: the enclosing function's parameters (not self/cls).
+      - patterns:
+          - pattern-inside: |
+              def $F(..., $P, ...):
+                ...
+          - focus-metavariable: $P
+          - metavariable-regex:
+              metavariable: $P
+              regex: ^(?!(self|cls)$)
+    pattern-sanitizers:
+      - pattern: shlex.quote(...)
+    pattern-sinks:
+      # Only command strings built with formatting; passing a parameter straight through is a wrapper.
+      - patterns:
+          - pattern-either:
+              - pattern: os.system($CMD)
+              - pattern: os.popen($CMD, ...)
+              - pattern: subprocess.$FN($CMD, ..., shell=True, ...)
+              - pattern: $MOD.Popen($CMD, ..., shell=True, ...)
+              - pattern: Popen($CMD, ..., shell=True, ...)
+          - focus-metavariable: $CMD
+          # The command string is built with formatting, inline or in a variable assigned just before.
+          - pattern-either:
+              - pattern: f"...{$X}..."
+              - pattern: '"..." % $ARGS'
+              - pattern: '"...".format(...)'
+              - pattern: '"..." + $X'
+              - pattern: '$X + "..."'
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: |
+                          $V = f"...{$X}..."
+                          ...
+                      - pattern-inside: |
+                          $V = "..." % $ARGS
+                          ...
+                      - pattern-inside: |
+                          $V = "...".format(...)
+                          ...
+                      - pattern-inside: |
+                          $V = "..." + $X
+                          ...
+                      - pattern-inside: |
+                          $V = $X + "..."
+                          ...
+                  - pattern: $V

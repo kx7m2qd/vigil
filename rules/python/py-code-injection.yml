@@ -1,0 +1,50 @@
+rules:
+  - id: py-code-injection
+    languages: [python]
+    severity: ERROR
+    message: >-
+      Request data is run as Python code with `eval`/`exec`/`compile`. An attacker can send
+      `__import__('os').system('...')` and take over the server process. Parse data instead of
+      executing it: `json.loads()` for structured input, `ast.literal_eval()` for Python literals, or
+      a lookup table of allowed operations.
+    metadata:
+      title: Code injection via eval/exec
+      cwe: ["CWE-94: Improper Control of Generation of Code ('Code Injection')"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: high
+      severity: critical
+    mode: taint
+    pattern-sources:
+      - pattern: flask.request.$ATTR
+      - pattern: flask.request.$METHOD(...)
+      # The request handed whole to a wrapper (`RequestWrapper(request).get_form_parameter(...)`).
+      - pattern: $WRAP(flask.request)
+      - patterns:
+          - pattern-inside: |
+              def $VIEW($REQ, ...):
+                ...
+          - pattern-either:
+              - pattern: $REQ.GET
+              - pattern: $REQ.POST
+              - pattern: $REQ.COOKIES
+    pattern-sanitizers:
+      - pattern: int(...)
+      - pattern: float(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: eval($CODE, ...)
+              - pattern: exec($CODE, ...)
+              - pattern: compile($CODE, ...)
+          # Input checked to be a single quoted string literal before it is evaluated.
+          - pattern-not-inside: |
+              if <... $B.startswith(...) ...>:
+                  ...
+                  return ...
+              ...
+          - pattern-not-inside: |
+              if not <... $B.startswith(...) ...>:
+                  ...
+                  return ...
+              ...
+          - focus-metavariable: $CODE

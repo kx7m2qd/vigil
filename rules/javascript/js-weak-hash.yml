@@ -1,0 +1,39 @@
+rules:
+  - id: js-weak-hash
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A password or secret is hashed with MD5/SHA-1. These hashes are fast and broken, so a leaked
+      hash is cracked offline in seconds. Hash passwords with a slow, salted KDF: `bcrypt` /
+      `bcryptjs`, `argon2`, or `crypto.scrypt`. MD5/SHA-1 for ETags, cache keys and checksums is fine.
+    metadata:
+      title: Weak hash used for a password or secret
+      cwe: ["CWE-328: Use of Weak Hash"]
+      owasp: ["A02:2021 - Cryptographic Failures"]
+      confidence: medium
+    # Scoped to credentials on purpose, like py-weak-hash.
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern: $W
+              - pattern: $O.$W
+          - metavariable-regex:
+              metavariable: $W
+              regex: (?i).*(passw|passphrase|pwd|secret|credential)
+      - pattern: $D["=~/(?i)(passw|passphrase|pwd|secret|credential)/"]
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: $C.createHash("=~/(?i)^(md4|md5|sha1|sha-1|ripemd160)$/").update($X, ...)
+              - pattern: createHash("=~/(?i)^(md4|md5|sha1|sha-1|ripemd160)$/").update($X, ...)
+              - patterns:
+                  - pattern-inside: |
+                      $H = $C.createHash("=~/(?i)^(md4|md5|sha1|sha-1|ripemd160)$/");
+                      ...
+                  - pattern: $H.update($X, ...)
+              - pattern: md5($X)
+              - pattern: sha1($X)
+              - pattern: CryptoJS.MD5($X, ...)
+              - pattern: CryptoJS.SHA1($X, ...)
+          - focus-metavariable: $X

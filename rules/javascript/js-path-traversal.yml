@@ -1,0 +1,44 @@
+rules:
+  - id: js-path-traversal
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Request data is used as a file path. `../` sequences let an attacker read or overwrite files
+      outside the intended folder (e.g. `../../.env`). `path.join` does not prevent this. Use
+      `path.basename()` for file names, or resolve the path and check it starts with the allowed
+      base directory; for Express use `res.sendFile(name, { root })`.
+    metadata:
+      title: Path traversal
+      cwe: ["CWE-22: Improper Limitation of a Pathname to a Restricted Directory"]
+      owasp: ["A01:2021 - Broken Access Control"]
+      confidence: high
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+    pattern-sanitizers:
+      - pattern: path.basename(...)
+      - pattern: basename(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - patterns:
+                  - pattern-either:
+                      - pattern: $FS.$M($P, ...)
+                      - pattern: $FS.promises.$M($P, ...)
+                  - metavariable-regex:
+                      metavariable: $FS
+                      regex: ^(fs|fsp|fsPromises|fse)$
+                  - metavariable-regex:
+                      metavariable: $M
+                      regex: ^(readFile|readFileSync|createReadStream|writeFile|writeFileSync|createWriteStream|appendFile|appendFileSync|unlink|unlinkSync|rm|rmSync|readdir|readdirSync)$
+              - pattern: $RES.sendFile($P)
+              - pattern: $RES.download($P)
+          - focus-metavariable: $P

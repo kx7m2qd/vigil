@@ -1,0 +1,85 @@
+rules:
+  - id: js-xss
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      Request data is written into an HTML response (or into the DOM) without escaping (cross-site
+      scripting). An attacker sends a link with `<script>` in it, and the script runs in the victim's
+      browser with their session: it can read cookies, make requests as them, or rewrite the page.
+      Render through a template engine that auto-escapes (EJS `<%= %>`, Pug, React), escape with
+      `escape-html` / `he.encode`, sanitize HTML with `DOMPurify.sanitize`, or use `textContent`
+      instead of `innerHTML`.
+    metadata:
+      title: Cross-site scripting (XSS)
+      cwe: ["CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: medium
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+      # Browser: attacker-controlled parts of the URL.
+      - pattern-either:
+          - pattern: location.hash
+          - pattern: location.search
+          - pattern: location.href
+          - pattern: window.location.hash
+          - pattern: window.location.search
+          - pattern: window.location.href
+          - pattern: document.URL
+          - pattern: document.documentURI
+          - pattern: document.referrer
+          - pattern: new URLSearchParams(...).get(...)
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: escapeHtml(...)
+          - pattern: escape(...)
+          - pattern: $X.escape(...)
+          - pattern: he.encode(...)
+          - pattern: he.escape(...)
+          - pattern: DOMPurify.sanitize(...)
+          - pattern: $P.sanitize(...)
+          - pattern: sanitizeHtml(...)
+          - pattern: xss(...)
+          - pattern: encodeURIComponent(...)
+          - pattern: encodeURI(...)
+          - pattern: Number(...)
+          - pattern: parseInt(...)
+          - pattern: parseFloat(...)
+          # File contents at a user-chosen path are path traversal (js-path-traversal), not XSS.
+          - pattern: fs.$READ(...)
+          - pattern: fs.promises.$READ(...)
+          - pattern: fsp.$READ(...)
+          - pattern: readFile(...)
+          - pattern: readFileSync(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              # Express sends strings as text/html.
+              - patterns:
+                  - pattern-either:
+                      - pattern-inside: function ($REQ, $RES, ...) {...}
+                      - pattern-inside: function $F($REQ, $RES, ...) {...}
+                      - pattern-inside: ($REQ, $RES, ...) => {...}
+                  - pattern-either:
+                      - pattern: $RES.send($X)
+                      - pattern: $RES.write($X, ...)
+                      - pattern: $RES.end($X, ...)
+                      - pattern: $RES.status(...).send($X)
+              - pattern: $EL.innerHTML = $X
+              - pattern: $EL.outerHTML = $X
+              - pattern: $EL.insertAdjacentHTML($POS, $X)
+              - pattern: document.write($X)
+              - pattern: document.writeln($X)
+              - pattern: $(...).html($X)
+              - pattern: $(...).append($X)
+          - focus-metavariable: $X

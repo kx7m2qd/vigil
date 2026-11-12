@@ -1,0 +1,51 @@
+rules:
+  - id: js-ssrf
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      The server makes an HTTP request to a URL controlled by the requester (SSRF). Attackers use
+      this to reach internal services and cloud metadata endpoints (169.254.169.254) and steal
+      credentials. Keep the scheme and host fixed in code, or validate the host against an
+      allowlist and block private/link-local IP ranges after DNS resolution.
+    metadata:
+      title: Server-side request forgery (SSRF)
+      cwe: ["CWE-918: Server-Side Request Forgery (SSRF)"]
+      owasp: ["A10:2021 - Server-Side Request Forgery (SSRF)"]
+      confidence: medium
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+    pattern-sanitizers:
+      # A literal scheme+host prefix pins the destination; only the path is user-controlled.
+      - patterns:
+          - pattern: '"$PREFIX" + $X'
+          - metavariable-regex:
+              metavariable: $PREFIX
+              regex: ^https?://[^/]+/
+      - patterns:
+          - pattern: '`$PREFIX${$X}`'
+          - metavariable-regex:
+              metavariable: $PREFIX
+              regex: ^https?://[^/]+/
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: fetch($URL, ...)
+              - pattern: axios($URL, ...)
+              - pattern: axios.$M($URL, ...)
+              - pattern: got($URL, ...)
+              - pattern: got.$M($URL, ...)
+              - pattern: http.get($URL, ...)
+              - pattern: http.request($URL, ...)
+              - pattern: https.get($URL, ...)
+              - pattern: https.request($URL, ...)
+          - focus-metavariable: $URL

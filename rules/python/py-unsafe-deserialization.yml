@@ -1,0 +1,33 @@
+rules:
+  - id: py-unsafe-deserialization
+    languages: [python]
+    severity: WARNING
+    message: >-
+      This deserializer can execute code embedded in the data it loads (pickle, marshal, unsafe
+      YAML loaders, and model files loaded with `weights_only=False`). If the data or model file can
+      come from a user, an upload, a cache, or the internet, loading it is remote code execution.
+      Use JSON, `yaml.safe_load`, `torch.load(..., weights_only=True)`, or safetensors.
+    metadata:
+      title: Unsafe deserialization / unsafe model loading
+      cwe: ["CWE-502: Deserialization of Untrusted Data"]
+      owasp: ["A08:2021 - Software and Data Integrity Failures"]
+      confidence: medium
+    pattern-either:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+      - pattern: cPickle.loads(...)
+      - pattern: dill.loads(...)
+      - pattern: marshal.loads(...)
+      - pattern: joblib.load(...)
+      - pattern: yaml.unsafe_load(...)
+      - pattern: yaml.load(..., Loader=yaml.Loader, ...)
+      - pattern: yaml.load(..., Loader=yaml.UnsafeLoader, ...)
+      - pattern: yaml.load(..., Loader=yaml.FullLoader, ...)
+      - patterns:
+          - pattern: yaml.load(...)
+          - pattern-not: yaml.load(..., Loader=$L, ...)
+      - pattern: torch.load(..., weights_only=False, ...)
+      # Before torch 2.6, `weights_only` defaults to False.
+      - patterns:
+          - pattern: torch.load(...)
+          - pattern-not: torch.load(..., weights_only=$W, ...)

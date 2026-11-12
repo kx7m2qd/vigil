@@ -1,0 +1,43 @@
+rules:
+  - id: js-redos
+    languages: [javascript, typescript]
+    severity: WARNING
+    message: >-
+      A regular expression is built from request data (ReDoS / regex injection). An attacker sends a
+      pattern like `(a+)+$` that takes exponential time to match; Node runs regexes on the single
+      event loop thread, so one request freezes the whole server. Escape user input before
+      building a regex (`_.escapeRegExp`, `s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')`), or use
+      plain string methods (`includes`, `startsWith`) instead.
+    metadata:
+      title: Regular expression built from user input (ReDoS)
+      cwe: ["CWE-1333: Inefficient Regular Expression Complexity"]
+      owasp: ["A03:2021 - Injection"]
+      confidence: medium
+    mode: taint
+    pattern-sources:
+      - patterns:
+          - pattern-either:
+              - pattern-inside: function ($REQ, $RES, ...) {...}
+              - pattern-inside: function $F($REQ, $RES, ...) {...}
+              - pattern-inside: ($REQ, $RES, ...) => {...}
+          - pattern-either:
+              - pattern: $REQ.query
+              - pattern: $REQ.body
+              - pattern: $REQ.params
+              - pattern: $REQ.headers
+              - pattern: $REQ.cookies
+    pattern-sanitizers:
+      - pattern-either:
+          - pattern: _.escapeRegExp(...)
+          - pattern: escapeRegExp(...)
+          - pattern: escapeStringRegexp(...)
+          - pattern: RegExp.escape(...)
+          - pattern: $X.replace($RE, "\\$&")
+          - pattern: Number(...)
+          - pattern: parseInt(...)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: new RegExp($X, ...)
+              - pattern: RegExp($X, ...)
+          - focus-metavariable: $X

@@ -1,0 +1,26 @@
+rules:
+  - id: js-xxe
+    languages: [javascript, typescript]
+    severity: ERROR
+    message: >-
+      XML is parsed with external entity expansion turned on (`noent: true`) (XXE). A document
+      declaring `<!ENTITY x SYSTEM "file:///etc/passwd">` makes the parser read local files into the
+      result, or fetch internal URLs (SSRF). Remove `noent: true` (libxmljs leaves entities
+      unexpanded by default) and keep `nonet: true`; if you only need data, use a parser without DTD
+      support such as `fast-xml-parser`.
+    metadata:
+      title: XML external entity (XXE) expansion enabled
+      cwe: ["CWE-611: Improper Restriction of XML External Entity Reference"]
+      owasp: ["A05:2021 - Security Misconfiguration"]
+      confidence: high
+    # Search mode: the option is dangerous on its own; the XML usually arrives through an upload or
+    # a request body we can't always trace.
+    patterns:
+      - pattern-either:
+          - pattern: '$L.parseXml($X, {..., noent: true, ...})'
+          - pattern: '$L.parseXmlString($X, {..., noent: true, ...})'
+          - pattern: '$L.parseXmlAsync($X, {..., noent: true, ...})'
+          - pattern: '$L.parseXmlStringAsync($X, {..., noent: true, ...})'
+          - pattern: '$L.parseHtml($X, {..., noent: true, ...})'
+          - pattern: 'new $L.SaxParser({..., noent: true, ...})'
+          - pattern: 'new $L.SaxPushParser({..., noent: true, ...})'

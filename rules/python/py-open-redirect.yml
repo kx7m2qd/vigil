@@ -1,0 +1,135 @@
+rules:
+  - id: py-open-redirect
+    languages: [python]
+    severity: WARNING
+    message: >-
+      Request data decides where the user is redirected. An attacker can send a link on your trusted
+      domain that bounces victims to their own site (`?next=https://evil.example/login`), which makes
+      phishing pages convincing and can leak OAuth codes or tokens. Redirect only to a path you built
+      (`url_for(...)`), or check the target first and reject it unless it is a relative path or an
+      allowed host (Django: `url_has_allowed_host_and_scheme(url, allowed_hosts={request.get_host()})`;
+      otherwise compare `urlparse(url).netloc` against an allowlist and reject `//` and `\` prefixes).
+    metadata:
+      title: Open redirect
+      cwe: ["CWE-601: URL Redirection to Untrusted Site ('Open Redirect')"]
+      owasp: ["A01:2021 - Broken Access Control"]
+      confidence: high
+    mode: taint
+    pattern-sources:
+      # Routing-only attributes are decided by the URL map, not free attacker text.
+      - patterns:
+          - pattern: flask.request.$ATTR
+          - metavariable-regex:
+              metavariable: $ATTR
+              regex: ^(?!(path|full_path|script_root|url_rule|endpoint|method|blueprint|blueprints)$)
+      # The request handed whole to a wrapper (`RequestWrapper(request).get_form_parameter(...)`).
+      - pattern: $WRAP(flask.request)
+      - patterns:
+          - pattern-inside: |
+              def $VIEW($REQ, ...):
+                ...
+          - pattern-either:
+              - pattern: $REQ.GET
+              - pattern: $REQ.POST
+              - pattern: $REQ.COOKIES
+              - pattern: $REQ.headers
+    pattern-sanitizers:
+      - pattern: flask.url_for(...)
+      - pattern: django.urls.reverse(...)
+      - pattern: int(...)
+      # A fixed path or host prefix keeps the target on this site ("/docs/" + page). A bare "/" does
+      # not: "/" + "/evil.example" is a protocol-relative URL.
+      - patterns:
+          - pattern-either:
+              - pattern: '"$P" + $X'
+              - pattern: '"$P".format(...)'
+              - pattern: '"$P" % $X'
+          - metavariable-regex:
+              metavariable: $P
+              regex: ^(/[^/\\]|https?://[^/]+/)
+    pattern-sinks:
+      - patterns:
+          - pattern-either:
+              - pattern: flask.redirect($U, ...)
+              - pattern: werkzeug.utils.redirect($U, ...)
+              - pattern: django.shortcuts.redirect($U, ...)
+              - pattern: django.http.HttpResponseRedirect($U, ...)
+              - pattern: django.http.HttpResponsePermanentRedirect($U, ...)
+              - pattern: starlette.responses.RedirectResponse($U, ...)
+              - pattern: fastapi.responses.RedirectResponse($U, ...)
+              - pattern: $R.headers["Location"] = $U
+          # The target was checked against an allowlist before redirecting.
+          - pattern-not-inside: |
+              if <... $U.netloc ...>:
+                  ...
+                  return ...
+              ...
+          - pattern-not-inside: |
+              if <... urllib.parse.urlparse(...).netloc ...>:
+                  ...
+                  return ...
+              ...
+          - pattern-not-inside: |
+              $PARSED = urllib.parse.urlparse(...)
+              ...
+              if <... $PARSED.netloc ...>:
+                  ...
+                  return ...
+              ...
+          - pattern-not-inside: |
+              if <... $U.netloc ...>:
+                  ...
+                  flask.abort(...)
+              ...
+          - pattern-not-inside: |
+              if <... urllib.parse.urlparse(...).netloc ...>:
+                  ...
+                  flask.abort(...)
+              ...
+          - pattern-not-inside: |
+              $PARSED = urllib.parse.urlparse(...)
+              ...
+              if <... $PARSED.netloc ...>:
+                  ...
+                  flask.abort(...)
+              ...
+          - pattern-not-inside: |
+              if <... $U.netloc ...>:
+                  ...
+                  raise ...
+              ...
+          - pattern-not-inside: |
+              if <... urllib.parse.urlparse(...).netloc ...>:
+                  ...
+                  raise ...
+              ...
+          - pattern-not-inside: |
+              $PARSED = urllib.parse.urlparse(...)
+              ...
+              if <... $PARSED.netloc ...>:
+                  ...
+                  raise ...
+              ...
+          # The same checks wrapped in `try:` to catch a parse error.
+          - pattern-not-inside: |
+              try:
+                  ...
+                  if <... $PARSED.netloc ...>:
+                      ...
+                      return ...
+                  ...
+              except ...:
+                  ...
+              ...
+          - pattern-not-inside: |
+              if not <... url_has_allowed_host_and_scheme(...) ...>:
+                  ...
+              ...
+          - pattern-not-inside: |
+              if <... url_has_allowed_host_and_scheme(...) ...>:
+                  ...
+          - pattern-not-inside: |
+              if not <... is_safe_url(...) ...>:
+                  ...
+              ...
+          - focus-metavariable: $U
