@@ -1,0 +1,21 @@
+{
+  "npm": [
+    {
+      "name": "ansistyles",
+      "reason": "Legit, unrelated 2013 package (colors for strings); only differs from ansi-styles by the hyphen."
+    },
+    {
+      "name": "babel-generator",
+      "reason": "Babel 6 legacy name of @babel/generator; still pulled in by old toolchains."
+    },
+    {
+      "name": "babel-template",
+      "reason": "Babel 6 legacy name of @babel/template."
+    },
+    {
+      "name": "babel-traverse",
+      "reason": "Babel 6 legacy name of @babel/traverse."
+    }
+  ],
+  "PyPI": []
+}

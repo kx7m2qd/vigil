@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
 import { SEVERITY_ORDER, severityAtLeast, type EngineName, type Severity } from "./core/finding.js";
 import { enginePath, installEngine, isInstalled, resolveEngine } from "./engines/install.js";
-import { ENGINES } from "./engines/manifest.js";
+import { BINARY_ENGINES, ENGINES } from "./engines/manifest.js";
 import { RULES_DIR } from "./engines/opengrep.js";
 import { run } from "./engines/run.js";
 import { install, uninstall } from "./hook/install.js";
@@ -22,6 +22,13 @@ Usage:
       --fail-on <severity|none>    Exit 1 if a finding is at least this severe (default: high)
       --engines <list>             Comma-separated subset of: ${ALL_ENGINES.join(", ")}
       --no-install                 Do not auto-install missing engines
+      --offline                    Turn off the pkgrisk network checks (registry lookups). Typosquat,
+                                   install-script and known-malicious checks still run.
+
+  pkgrisk (dependency supply-chain checks) sends package names and versions, nothing else, to
+  registry.npmjs.org and pypi.org (osv-scanner already sends the same to osv.dev). Source code, file
+  paths and manifest contents never leave your machine. Use --offline to send nothing.
+
   ${TOOL_NAME} engines install      Download and verify the pinned engine binaries
   ${TOOL_NAME} engines status       Show which engines are installed
   ${TOOL_NAME} hook install [--force]  Install a git pre-commit hook. It scans staged content (the
@@ -59,6 +66,7 @@ async function cmdScan(args: string[]): Promise<number> {
       "fail-on": { type: "string", default: "high" },
       engines: { type: "string" },
       "no-install": { type: "boolean", default: false },
+      offline: { type: "boolean", default: false },
     },
   });
   const format = values.format;
@@ -69,6 +77,7 @@ async function cmdScan(args: string[]): Promise<number> {
   const result = await scan(positionals[0] ?? ".", {
     engines: parseEngines(values.engines),
     autoInstall: !values["no-install"],
+    offline: values.offline,
   });
 
   const report =
@@ -94,14 +103,14 @@ async function cmdScan(args: string[]): Promise<number> {
 async function cmdEngines(args: string[]): Promise<number> {
   const sub = args[0];
   if (sub === "status") {
-    for (const name of ALL_ENGINES) {
+    for (const name of BINARY_ENGINES) {
       const ok = await isInstalled(name);
       process.stdout.write(`${name.padEnd(12)} ${ENGINES[name].version.padEnd(8)} ${ok ? enginePath(name) : "not installed"}\n`);
     }
     return 0;
   }
   if (sub === "install") {
-    for (const name of ALL_ENGINES) {
+    for (const name of BINARY_ENGINES) {
       if (await isInstalled(name)) {
         process.stdout.write(`${name}: already installed\n`);
         continue;

@@ -2,7 +2,7 @@ import { createHash, scryptSync } from "node:crypto";
 
 export type Severity = "critical" | "high" | "medium" | "low" | "info";
 export type Category = "code" | "dependency" | "secret";
-export type EngineName = "opengrep" | "osv-scanner" | "gitleaks";
+export type EngineName = "opengrep" | "osv-scanner" | "gitleaks" | "pkgrisk";
 
 export const SEVERITY_ORDER: readonly Severity[] = ["critical", "high", "medium", "low", "info"];
 

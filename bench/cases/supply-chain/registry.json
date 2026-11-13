@@ -1,0 +1,17 @@
+{
+  "_comment": "Recorded registry responses (trimmed to the fields pkgrisk reads). Names not listed answer 404.",
+  "npm": {
+    "express": { "dist-tags": { "latest": "4.21.0" }, "time": { "created": "2010-12-29T19:38:25.450Z", "4.21.0": "2024-09-11T19:39:14.000Z" } },
+    "lodash": { "dist-tags": { "latest": "4.17.21" }, "time": { "created": "2012-04-23T16:37:12.603Z", "4.17.21": "2021-02-20T15:42:16.891Z" } },
+    "crossenv": { "dist-tags": { "latest": "7.0.0" }, "time": { "created": "2017-07-19T08:12:00.000Z", "7.0.0": "2017-07-19T08:12:00.000Z" } },
+    "esbuild": { "dist-tags": { "latest": "0.24.0" }, "time": { "created": "2020-01-21T06:40:22.000Z", "0.24.0": "2024-09-22T02:06:00.000Z" } },
+    "fastify-auth-ratelimit": { "dist-tags": { "latest": "1.0.3" }, "time": { "created": "2026-10-27T09:00:00.000Z", "1.0.0": "2026-10-27T09:00:00.000Z", "1.0.3": "2026-10-31T22:00:00.000Z" } }
+  },
+  "PyPI": {
+    "flask": { "info": { "version": "3.0.3" }, "releases": { "3.0.3": [{ "packagetype": "bdist_wheel", "upload_time_iso_8601": "2024-04-07T19:26:08.000Z" }, { "packagetype": "sdist", "upload_time_iso_8601": "2024-04-07T19:26:10.000Z" }] } },
+    "requests": { "info": { "version": "2.32.3" }, "releases": { "2.32.3": [{ "packagetype": "bdist_wheel", "upload_time_iso_8601": "2024-05-29T15:37:47.000Z" }] } },
+    "reqeusts": { "info": { "version": "2.31.0" }, "releases": { "2.31.0": [{ "packagetype": "bdist_wheel", "upload_time_iso_8601": "2023-06-01T10:00:00.000Z" }] } },
+    "numpy": { "info": { "version": "2.3.4" }, "releases": { "1.26.4": [{ "packagetype": "bdist_wheel", "upload_time_iso_8601": "2024-02-05T23:48:00.000Z" }], "2.3.4": [{ "packagetype": "bdist_wheel", "upload_time_iso_8601": "2026-11-01T08:00:00.000Z" }] } },
+    "pdfminer-fastparse": { "info": { "version": "0.2.0" }, "releases": { "0.2.0": [{ "packagetype": "sdist", "upload_time_iso_8601": "2025-03-02T11:00:00.000Z" }] } }
+  }
+}

@@ -3,8 +3,7 @@ import { createReadStream } from "node:fs";
 import { chmod, mkdir, mkdtemp, rename, rm, stat, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { EngineName } from "../core/finding.js";
-import { ENGINES, currentPlatform, type Artifact } from "./manifest.js";
+import { ENGINES, currentPlatform, type Artifact, type BinaryEngine as EngineName } from "./manifest.js";
 import { run } from "./run.js";
 
 export function cacheRoot(): string {

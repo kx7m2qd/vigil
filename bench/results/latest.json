@@ -7,9 +7,9 @@
     "recall": 0.85
   },
   "totals": {
-    "labels": 46,
-    "findings": 46,
-    "tp": 46,
+    "labels": 54,
+    "findings": 54,
+    "tp": 54,
     "fp": 0,
     "fn": 0
   },
@@ -147,6 +147,48 @@
       "precision": 1,
       "recall": 1
     },
+    "pkg-install-script": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "pkg-new-package": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "pkg-new-version": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "pkg-nonexistent": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "pkg-sdist-only": {
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
+    "pkg-typosquat": {
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1,
+      "recall": 1
+    },
     "py-code-injection": {
       "tp": 1,
       "fp": 0,
@@ -258,5 +300,7 @@
     "express-api/src/reports.js:7 js-sql-injection ← js-sql-formatted-query"
   ],
   "missed": [],
-  "warnings": []
+  "warnings": [
+    "pkgrisk: 1 dependencies run install scripts (not reported individually)"
+  ]
 }

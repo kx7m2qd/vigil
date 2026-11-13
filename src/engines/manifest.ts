@@ -1,5 +1,8 @@
 import type { EngineName } from "../core/finding.js";
 
+/** Engines that run as a downloaded binary. `pkgrisk` is built in (no binary to resolve). */
+export type BinaryEngine = Exclude<EngineName, "pkgrisk">;
+
 export type Platform = "darwin-arm64" | "linux-x64";
 
 export interface Artifact {
@@ -28,7 +31,7 @@ export interface EngineSpec {
  * 2026-10-22). TODO: also verify with `cosign verify-blob` before the first
  * public release (docs/SECURITY.md).
  */
-export const ENGINES: Record<EngineName, EngineSpec> = {
+export const ENGINES: Record<BinaryEngine, EngineSpec> = {
   opengrep: {
     version: "1.30.1",
     binary: "opengrep",
@@ -89,3 +92,5 @@ export function currentPlatform(): Platform | undefined {
   if (key === "linux-x64") return "linux-x64";
   return undefined;
 }
+
+export const BINARY_ENGINES = Object.keys(ENGINES) as BinaryEngine[];

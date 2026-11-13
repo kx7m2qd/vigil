@@ -73,6 +73,24 @@ export function normalizeOsv(root: string, out: OsvOutput): Finding[] {
         const advisories = [...new Set([...g.ids, ...(g.aliases ?? [])])].sort();
         const fixed = fixedVersions(members, pkg.package);
         const { name, version, ecosystem } = pkg.package;
+        // OpenSSF malicious-package advisories: the package itself is the attack, not a bug in it.
+        if (advisories.some((a) => a.startsWith("MAL-"))) {
+          findings.push({
+            id: fingerprint("osv-scanner", "pkg-known-malicious", path, ecosystem, name),
+            category: "dependency",
+            engine: "osv-scanner",
+            ruleId: "pkg-known-malicious",
+            title: `Known malicious package: ${name}`,
+            message: `${name}@${version} (${ecosystem}) is listed as malicious (${advisories.filter((a) => a.startsWith("MAL-")).join(", ")}). It was published to steal data or run attacker code. Remove it, rotate any secrets that were reachable where it was installed, and install the legitimate package if you meant a different one.`,
+            severity: "critical",
+            confidence: "high",
+            location: { path, startLine: 1 },
+            cwe: ["CWE-506"],
+            owasp: ["A08:2021 - Software and Data Integrity Failures"],
+            dependency: { name, version, ecosystem, advisories, fixedVersions: [] },
+          });
+          continue;
+        }
         const fixHint = fixed.length ? ` Upgrade to ${fixed.join(" or ")}.` : " No fixed version published yet.";
         findings.push({
           id: fingerprint("osv-scanner", ruleId, path, ecosystem, name, version),

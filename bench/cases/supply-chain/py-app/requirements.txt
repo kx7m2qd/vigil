@@ -1,0 +1,7 @@
+# web
+flask==3.0.3
+requests==2.32.3
+reqeusts==2.31.0
+numpy>=1.26
+flask-openai-guardrails==0.4.1
+pdfminer-fastparse==0.2.0

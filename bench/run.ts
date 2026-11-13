@@ -10,6 +10,8 @@ import type { Finding } from "../src/core/finding.js";
 import { DEFAULT_IGNORES, isIgnored } from "../src/core/ignore.js";
 import { resolveEngine } from "../src/engines/install.js";
 import { runOpengrep } from "../src/engines/opengrep.js";
+import { runPkgrisk } from "../src/engines/pkgrisk/index.js";
+import type { FetchLike } from "../src/engines/pkgrisk/registry.js";
 
 const BENCH_DIR = fileURLToPath(new URL(".", import.meta.url));
 const CASES_DIR = join(BENCH_DIR, "cases");
@@ -67,6 +69,27 @@ function onLine(f: Finding, l: Label): boolean {
   return f.location.path === l.path && f.location.startLine <= l.line && l.line <= end;
 }
 
+/**
+ * bench/cases/supply-chain: pkgrisk against recorded registry responses and a fixed clock, so the
+ * gate stays offline and deterministic. Manifests can't hold comments, so the expected findings
+ * live in expected.json as "<rule> <ecosystem> <name>".
+ */
+async function supplyChain(): Promise<{ expected: string[]; got: string[]; warnings: string[] }> {
+  const dir = join(CASES_DIR, "supply-chain");
+  const spec = JSON.parse(await readFile(join(dir, "expected.json"), "utf8")) as { now: string; expected: string[] };
+  const docs = JSON.parse(await readFile(join(dir, "registry.json"), "utf8")) as Record<"npm" | "PyPI", Record<string, unknown>>;
+  const fetch: FetchLike = async (url) => {
+    const npm = /^https:\/\/registry\.npmjs\.org\/(.+)$/.exec(url);
+    const pypi = /^https:\/\/pypi\.org\/pypi\/(.+)\/json$/.exec(url);
+    const doc = npm ? docs.npm[decodeURIComponent(npm[1] as string)] : pypi ? docs.PyPI[decodeURIComponent(pypi[1] as string)] : undefined;
+    return doc ? new Response(JSON.stringify(doc), { status: 200 }) : new Response("{}", { status: 404 });
+  };
+  const now = Date.parse(spec.now);
+  const out = await runPkgrisk(dir, DEFAULT_IGNORES, { fetch, now: () => now, sleep: async () => {}, cacheDir: undefined });
+  const got = out.findings.map((f) => `${f.ruleId} ${f.dependency?.ecosystem} ${f.dependency?.name}`);
+  return { expected: spec.expected, got, warnings: out.warnings };
+}
+
 const ratio = (num: number, den: number) => (den === 0 ? 1 : Math.round((num / den) * 1000) / 1000);
 
 async function main(): Promise<number> {
@@ -105,10 +128,29 @@ async function main(): Promise<number> {
   }
   const missed = labels.filter((l) => !matched.has(l));
   for (const l of missed) bump(l.ruleId, "fn");
+  const missedText = missed.map((l) => `${l.path}:${l.line} ${l.ruleId}`);
 
-  const tp = matched.size;
+  const sc = await supplyChain();
+  let scTp = 0;
+  for (const g of sc.got) {
+    const rule = g.split(" ")[0] as string;
+    if (sc.expected.includes(g)) {
+      scTp++;
+      bump(rule, "tp");
+    } else {
+      bump(rule, "fp");
+      falsePositives.push(`supply-chain: ${g}`);
+    }
+  }
+  for (const e of sc.expected.filter((x) => !sc.got.includes(x))) {
+    bump(e.split(" ")[0] as string, "fn");
+    missedText.push(`supply-chain: ${e}`);
+  }
+  warnings.push(...sc.warnings);
+
+  const tp = matched.size + scTp;
   const precision = ratio(tp, tp + falsePositives.length);
-  const recall = ratio(tp, labels.length);
+  const recall = ratio(tp, labels.length + sc.expected.length);
   const pass = precision >= thresholds.precision && recall >= thresholds.recall;
 
   const result = {
@@ -116,7 +158,13 @@ async function main(): Promise<number> {
     precision,
     recall,
     thresholds,
-    totals: { labels: labels.length, findings: findings.length, tp, fp: falsePositives.length, fn: missed.length },
+    totals: {
+      labels: labels.length + sc.expected.length,
+      findings: findings.length + sc.got.length,
+      tp,
+      fp: falsePositives.length,
+      fn: missedText.length,
+    },
     rules: Object.fromEntries(
       [...perRule.entries()]
         .sort(([a], [b]) => a.localeCompare(b))
@@ -124,7 +172,7 @@ async function main(): Promise<number> {
     ),
     falsePositives: falsePositives.sort(),
     bySibling: bySibling.sort(),
-    missed: missed.map((l) => `${l.path}:${l.line} ${l.ruleId}`),
+    missed: missedText,
     warnings,
   };
   await mkdir(join(BENCH_DIR, "results"), { recursive: true });

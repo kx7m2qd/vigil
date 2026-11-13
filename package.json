@@ -20,7 +20,8 @@
     "bench": "tsx bench/run.ts",
     "check": "npm run typecheck && npm test && npm run test:rules",
     "bench:owasp": "tsx bench/owasp.ts",
-    "bench:cves": "tsx bench/cves.ts"
+    "bench:cves": "tsx bench/cves.ts",
+    "data:popular": "tsx scripts/fetch-popular.ts"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

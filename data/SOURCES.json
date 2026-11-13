@@ -1,0 +1,20 @@
+{
+  "popular-npm": {
+    "source": "npm-high-impact (top list, first 5000 in order)",
+    "url": "https://registry.npmjs.org/npm-high-impact/-/npm-high-impact-1.13.0.tgz",
+    "version": "1.13.0",
+    "integrity": "sha512-Dngjb2fyZfj4/7aZ+9kGGGK/IWnBhb45nzHX1ECxi26vXixkKzdixCB81XTwQzyAwc4d39VbcTL+rlS+d7VETA==",
+    "sha256": "63ed31dacc861ac10c95b47af242a984f210f0170eaea8eaa66ba4a9b8f9d30b",
+    "fetched": "2026-11-12",
+    "count": 5000
+  },
+  "popular-pypi": {
+    "source": "hugovk/top-pypi-packages (30-day downloads, first 5000; names PEP 503-normalized)",
+    "url": "https://raw.githubusercontent.com/hugovk/top-pypi-packages/29c0d4c38c28c0e6b99e73fa09cb91a2323ca51b/top-pypi-packages.min.json",
+    "version": "29c0d4c38c28c0e6b99e73fa09cb91a2323ca51b",
+    "sha256": "3e958a64ebe1de0b6a4ab4c6b465d481f350fd1dfa926c639add36eb34dabc1e",
+    "upstreamLastUpdate": "2026-11-01 06:41:05",
+    "fetched": "2026-11-12",
+    "count": 5000
+  }
+}

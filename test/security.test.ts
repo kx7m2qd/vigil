@@ -182,7 +182,7 @@ describe.skipIf(!enginesReady)("hostile repo cannot suppress findings", () => {
     };
     for (const [name, body] of Object.entries(files)) await writeFile(join(repo, name), body);
 
-    const result = await scan(repo, { autoInstall: false });
+    const result = await scan(repo, { autoInstall: false, offline: true });
     expect(result.engines.every((e) => e.ok)).toBe(true);
     const rules = new Set(result.findings.map((f) => f.ruleId));
     expect(rules).toContain("js-command-injection");

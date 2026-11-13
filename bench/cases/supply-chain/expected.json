@@ -1,0 +1,14 @@
+{
+  "_comment": "Every finding pkgrisk should report on this case: <rule> <ecosystem> <name>. Anything else is a false positive.",
+  "now": "2026-11-01T12:00:00Z",
+  "expected": [
+    "pkg-typosquat npm crossenv",
+    "pkg-install-script npm crossenv",
+    "pkg-nonexistent npm express-jwt-session-guard",
+    "pkg-new-package npm fastify-auth-ratelimit",
+    "pkg-new-version npm fastify-auth-ratelimit",
+    "pkg-typosquat PyPI reqeusts",
+    "pkg-nonexistent PyPI flask-openai-guardrails",
+    "pkg-sdist-only PyPI pdfminer-fastparse"
+  ]
+}

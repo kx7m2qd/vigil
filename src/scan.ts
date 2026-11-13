@@ -3,15 +3,19 @@ import { dedupe, sortFindings, type EngineName, type Finding } from "./core/find
 import { DEFAULT_IGNORES, isIgnored, loadIgnorePatterns } from "./core/ignore.js";
 import { runGitleaks } from "./engines/gitleaks.js";
 import { overrideVar, resolveEngine } from "./engines/install.js";
+import type { BinaryEngine } from "./engines/manifest.js";
 import { runOpengrep } from "./engines/opengrep.js";
 import { runOsv } from "./engines/osv.js";
+import { runPkgrisk } from "./engines/pkgrisk/index.js";
 import type { EngineOutput } from "./engines/types.js";
 
-export const ALL_ENGINES: EngineName[] = ["opengrep", "osv-scanner", "gitleaks"];
+export const ALL_ENGINES: EngineName[] = ["opengrep", "osv-scanner", "gitleaks", "pkgrisk"];
 
 export interface ScanOptions {
   engines?: EngineName[];
   autoInstall?: boolean;
+  /** Turn off pkgrisk's registry lookups (the only network use of that engine). */
+  offline?: boolean;
 }
 
 export interface EngineStatus {
@@ -40,7 +44,7 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
   const engines = opts.engines ?? ALL_ENGINES;
   const autoInstall = opts.autoInstall ?? true;
 
-  const runners: Record<EngineName, (bin: string) => Promise<EngineOutput>> = {
+  const runners: Record<BinaryEngine, (bin: string) => Promise<EngineOutput>> = {
     opengrep: (bin) => runOpengrep(bin, root, ignores),
     "osv-scanner": (bin) => runOsv(bin, root),
     gitleaks: (bin) => runGitleaks(bin, root),
@@ -51,8 +55,11 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
     engines.map(async (engine) => {
       const started = Date.now();
       try {
-        const bin = await resolveEngine(engine, { autoInstall });
-        const out = await runners[engine](bin);
+        // pkgrisk is built in: there is no binary to resolve.
+        const out =
+          engine === "pkgrisk"
+            ? await runPkgrisk(root, ignores, { offline: opts.offline ?? false })
+            : await runners[engine](await resolveEngine(engine, { autoInstall }));
         return { engine, out, ms: Date.now() - started };
       } catch (e) {
         return { engine, error: e instanceof Error ? e.message : String(e), ms: Date.now() - started };
@@ -63,6 +70,7 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
   const findings: Finding[] = [];
   const warnings: string[] = [];
   for (const engine of engines) {
+    if (engine === "pkgrisk") continue;
     const v = overrideVar(engine);
     if (process.env[v]) warnings.push(`${engine}: using ${v}=${process.env[v]}, which is not checksum-verified`);
   }
