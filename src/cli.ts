@@ -29,6 +29,8 @@ Usage:
                                    lower, but still fail --fail-on at their original severity.
       --trust-reachability         Let --fail-on use the lowered severity of unreachable findings
       --reachable-only             Hide unreachable findings entirely (implies --trust-reachability)
+      --ignore-file <file>         Read ignore patterns from this file instead of <path>/.vigilignore
+                                   (CI: pass the base branch's copy so a PR can't un-scan its own code)
 
   pkgrisk (dependency supply-chain checks) sends package names and versions, nothing else, to
   registry.npmjs.org and pypi.org (osv-scanner already sends the same to osv.dev). Source code, file
@@ -75,6 +77,7 @@ async function cmdScan(args: string[]): Promise<number> {
       "reachable-only": { type: "boolean", default: false },
       "no-reachability": { type: "boolean", default: false },
       "trust-reachability": { type: "boolean", default: false },
+      "ignore-file": { type: "string" },
     },
   });
   const format = values.format;
@@ -88,6 +91,7 @@ async function cmdScan(args: string[]): Promise<number> {
     offline: values.offline,
     reachability: !values["no-reachability"],
     reachableOnly: values["reachable-only"],
+    ignoreFile: values["ignore-file"],
   });
 
   const report =

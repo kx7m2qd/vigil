@@ -27,7 +27,7 @@ inputs:
     description: Comma-separated subset of engines to run (default all).
     default: ""
   upload-sarif:
-    description: Upload results to GitHub code scanning. Needs `security-events: write`.
+    description: "Upload results to GitHub code scanning. Needs `security-events: write`."
     default: "true"
   sarif-file:
     description: Where to write the SARIF report.
@@ -79,8 +79,28 @@ runs:
         IN_OFFLINE: ${{ inputs.offline }}
         IN_ENGINES: ${{ inputs.engines }}
         IN_SARIF: ${{ inputs.sarif-file }}
+        BASE_SHA: ${{ github.event.pull_request.base.sha }}
       run: |
         args=(scan "$IN_PATH" --format sarif --output "$IN_SARIF" --fail-on "$IN_FAIL_ON")
+
+        # On pull requests, ignore patterns come from the base branch: the PR's own .vigilignore
+        # could otherwise exclude the code it adds. If the base copy can't be read, use none.
+        if [ -n "$BASE_SHA" ]; then
+          ignore_file="$RUNNER_TEMP/vigil-base.vigilignore"
+          : > "$ignore_file"
+          prefix=$(git -C "$IN_PATH" rev-parse --show-prefix 2>/dev/null || true)
+          if git -C "$IN_PATH" cat-file -e "$BASE_SHA^{commit}" 2>/dev/null \
+             || git -C "$IN_PATH" fetch --quiet --no-tags --depth=1 origin "$BASE_SHA" 2>/dev/null; then
+            git -C "$IN_PATH" show "$BASE_SHA:${prefix}.vigilignore" > "$ignore_file" 2>/dev/null || : > "$ignore_file"
+          else
+            echo "::warning::Vigil couldn't fetch the base commit, so it is scanning without any .vigilignore patterns."
+          fi
+          if ! cmp -s "$ignore_file" "$IN_PATH/.vigilignore" && { [ -s "$ignore_file" ] || [ -s "$IN_PATH/.vigilignore" ]; }; then
+            echo "::warning file=${prefix}.vigilignore::This pull request changes .vigilignore. Vigil used the base branch's version; the change takes effect after merge."
+          fi
+          args+=(--ignore-file "$ignore_file")
+        fi
+
         [ "$IN_TRUST" = "true" ] && args+=(--trust-reachability)
         [ "$IN_REACHABLE_ONLY" = "true" ] && args+=(--reachable-only)
         [ "$IN_OFFLINE" = "true" ] && args+=(--offline)

@@ -5,14 +5,15 @@ import { join } from "node:path";
 export const DEFAULT_IGNORES = ["node_modules/", ".git/", "dist/", "build/", "vendor/", ".venv/", "venv/", "__pycache__/"];
 
 /**
- * Load .vigilignore from the scan root. Each non-comment line is either a path
- * prefix ("bench/cases/") or a bare directory/file name ("fixtures") that
- * matches at any depth.
+ * Load .vigilignore from the scan root, or from `file` when given (CI passes the base branch's copy,
+ * so a pull request can't hide its own code by editing the ignore file). Each non-comment line is
+ * either a path prefix ("bench/cases/") or a bare directory/file name ("fixtures") that matches at
+ * any depth. A missing file means no patterns.
  */
-export async function loadIgnorePatterns(root: string): Promise<string[]> {
+export async function loadIgnorePatterns(root: string, file?: string): Promise<string[]> {
   let text = "";
   try {
-    text = await readFile(join(root, ".vigilignore"), "utf8");
+    text = await readFile(file ?? join(root, ".vigilignore"), "utf8");
   } catch {
     // No ignore file is fine.
   }

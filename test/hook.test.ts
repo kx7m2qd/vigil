@@ -3,11 +3,11 @@ import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/pr
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { Finding } from "../src/core/finding.js";
 import { isInstalled } from "../src/engines/install.js";
 import { addedLines } from "../src/hook/git.js";
-import { HOOK_MARKER, hookScript, install, uninstall } from "../src/hook/install.js";
+import { HOOK_MARKER, hookScript, install as installHook, uninstall } from "../src/hook/install.js";
 import { filterToAdded, hookRun } from "../src/hook/run.js";
 
 const exec = promisify(execFile);
@@ -165,6 +165,11 @@ describe("hookScript", () => {
 
 describe("install / uninstall", () => {
   const hookPath = (repo: string) => join(repo, ".git", "hooks", "pre-commit");
+  // A stand-in for dist/cli.js, so these tests don't depend on `npm run build` having run.
+  const fakeCli = join(tmpdir(), `vigil-fake-cli-${process.pid}.js`);
+  beforeAll(() => writeFile(fakeCli, ""));
+  afterAll(() => rm(fakeCli, { force: true }));
+  const install = (o: { cwd: string; force?: boolean }) => installHook({ ...o, cli: fakeCli });
 
   it("installs, is idempotent, and is executable", async () => {
     const repo = await tempRepo();

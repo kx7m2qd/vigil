@@ -57,6 +57,28 @@ export async function isInstalled(name: EngineName): Promise<boolean> {
   return (await sha256File(path)) === binarySha256(artifact);
 }
 
+/** Engine downloads are tens of MB; anything far larger, or a stalled connection, is not ours. */
+export const MAX_DOWNLOAD_BYTES = 512 * 1024 * 1024;
+const DOWNLOAD_TIMEOUT_MS = 10 * 60_000;
+
+/** Fetch with a deadline and a size cap, so a slow or oversized response fails instead of hanging CI. */
+export async function download(url: string, name: string, opts: { maxBytes?: number; timeoutMs?: number; fetch?: typeof fetch } = {}): Promise<Buffer> {
+  const max = opts.maxBytes ?? MAX_DOWNLOAD_BYTES;
+  const res = await (opts.fetch ?? fetch)(url, { signal: AbortSignal.timeout(opts.timeoutMs ?? DOWNLOAD_TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`Downloading ${name}: HTTP ${res.status} from ${url}`);
+  const declared = Number(res.headers.get("content-length") ?? 0);
+  if (declared > max) throw new Error(`Downloading ${name}: ${declared} bytes is over the ${max}-byte limit. Refusing.`);
+  if (!res.body) throw new Error(`Downloading ${name}: empty response from ${url}`);
+  const chunks: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of res.body) {
+    total += chunk.byteLength;
+    if (total > max) throw new Error(`Downloading ${name}: response exceeded the ${max}-byte limit. Refusing.`);
+    chunks.push(Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
+
 /**
  * Download the pinned artifact, verify its SHA-256, and place the binary in the
  * cache. A checksum mismatch aborts without writing anything executable.
@@ -71,9 +93,7 @@ export async function installEngine(name: EngineName): Promise<string> {
     );
   }
 
-  const res = await fetch(artifact.url);
-  if (!res.ok) throw new Error(`Downloading ${name}: HTTP ${res.status} from ${artifact.url}`);
-  const bytes = Buffer.from(await res.arrayBuffer());
+  const bytes = await download(artifact.url, name);
   const actual = createHash("sha256").update(bytes).digest("hex");
   if (actual !== artifact.sha256) {
     throw new Error(`Checksum mismatch for ${name}: expected ${artifact.sha256}, got ${actual}. Refusing to install.`);

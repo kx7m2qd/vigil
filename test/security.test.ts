@@ -9,7 +9,8 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { redactSecret, redactStringLiterals, secretDigest } from "../src/core/finding.js";
 import { hasUnsafeChars, sanitizeForTerminal } from "../src/core/sanitize.js";
-import { enginePath, isInstalled, resolveEngine } from "../src/engines/install.js";
+import { download, enginePath, isInstalled, resolveEngine } from "../src/engines/install.js";
+import { loadIgnorePatterns } from "../src/core/ignore.js";
 import { describeError, normalizeOpengrep } from "../src/engines/opengrep.js";
 import { engineEnv } from "../src/engines/run.js";
 import { toText } from "../src/report/text.js";
@@ -191,4 +192,32 @@ describe.skipIf(!enginesReady)("hostile repo cannot suppress findings", () => {
     expect(result.findings.some((f) => f.dependency?.name === "lodash")).toBe(true);
     expect(JSON.stringify(result)).not.toContain(FAKE_TOKEN);
   }, 180_000);
+});
+
+describe("engine downloads", () => {
+  const body = (n: number) => new Response(new Uint8Array(n));
+  it("refuses a response over the size cap, declared or streamed", async () => {
+    await expect(download("https://x", "e", { maxBytes: 10, fetch: async () => body(11) })).rejects.toThrow(/limit/);
+    const undeclared = async () => new Response(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(8)); c.enqueue(new Uint8Array(8)); c.close(); } }));
+    await expect(download("https://x", "e", { maxBytes: 10, fetch: undeclared })).rejects.toThrow(/limit/);
+    expect((await download("https://x", "e", { maxBytes: 10, fetch: async () => body(10) })).length).toBe(10);
+  });
+  it("passes a deadline to fetch", async () => {
+    let signal: AbortSignal | undefined;
+    await download("https://x", "e", { timeoutMs: 1234, fetch: async (_u, init) => ((signal = init?.signal ?? undefined), body(1)) });
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe("ignore file override (CI uses the base branch's copy)", () => {
+  it("--ignore-file replaces the repo's own .vigilignore; a missing file means no patterns", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "vigil-ign-"));
+    await writeFile(join(dir, ".vigilignore"), "src/\n");
+    await writeFile(join(dir, "base.ignore"), "docs/\n");
+    expect(await loadIgnorePatterns(dir)).toContain("src/");
+    const base = await loadIgnorePatterns(dir, join(dir, "base.ignore"));
+    expect(base).toContain("docs/");
+    expect(base).not.toContain("src/");
+    expect(await loadIgnorePatterns(dir, join(dir, "missing"))).not.toContain("src/");
+  });
 });

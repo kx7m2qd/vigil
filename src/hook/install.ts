@@ -42,7 +42,8 @@ function cliPath(): string {
   return resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "dist", "cli.js");
 }
 
-export async function install(opts: { force?: boolean; cwd?: string } = {}): Promise<HookResult> {
+/** `cli` overrides the dist/cli.js path the hook runs (tests use it so they don't need a build). */
+export async function install(opts: { force?: boolean; cwd?: string; cli?: string } = {}): Promise<HookResult> {
   const cwd = opts.cwd ?? process.cwd();
   let dir: string;
   try {
@@ -50,7 +51,7 @@ export async function install(opts: { force?: boolean; cwd?: string } = {}): Pro
   } catch {
     return { code: 2, message: "not inside a git repository" };
   }
-  const cli = cliPath();
+  const cli = opts.cli ?? cliPath();
   if (!(await exists(cli))) return { code: 2, message: `${cli} not found: run \`npm run build\` first` };
 
   const target = join(dir, "pre-commit");

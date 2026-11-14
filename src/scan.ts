@@ -21,6 +21,8 @@ export interface ScanOptions {
   reachability?: boolean;
   /** Drop findings judged unreachable instead of only lowering their severity. */
   reachableOnly?: boolean;
+  /** Ignore patterns from this file instead of `<root>/.vigilignore` (missing file → none). */
+  ignoreFile?: string;
 }
 
 export interface EngineStatus {
@@ -45,7 +47,7 @@ export interface ScanResult {
 
 export async function scan(target: string, opts: ScanOptions = {}): Promise<ScanResult> {
   const root = resolve(target);
-  const ignores = await loadIgnorePatterns(root);
+  const ignores = await loadIgnorePatterns(root, opts.ignoreFile);
   const engines = opts.engines ?? ALL_ENGINES;
   const autoInstall = opts.autoInstall ?? true;
 

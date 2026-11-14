@@ -19,7 +19,7 @@ jobs:
       security-events: write   # for the code scanning upload
     steps:
       - uses: actions/checkout@v7
-      - uses: kx7m2qd/vigil@main
+      - uses: kx7m2qd/vigil@v0
         with:
           fail-on: high
 ```
@@ -45,5 +45,8 @@ Outputs: `exit-code` (0 clean, 1 findings at/above `fail-on`, 2 scan error) and 
 ## Notes
 - Linux x64 runners only for now (the pinned engine binaries are linux-x64 and darwin-arm64).
 - Engine binaries are cached between runs and re-checked against their pinned SHA-256 every run.
-- Paths in `.vigilignore` at the scan root are skipped.
-- Pin to a commit SHA instead of `@main` if you want the action itself to stay fixed.
+- Paths in `.vigilignore` at the scan root are skipped. On pull requests the **base branch's**
+  `.vigilignore` is used, so a PR can't exclude the code it adds; a PR that edits it gets a warning,
+  and the change applies after merge.
+- `@v0` follows the latest 0.x release. For a fixed, auditable version, pin a full commit SHA
+  (`kx7m2qd/vigil@<sha> # v0.1.0`). Avoid `@main`: it changes with every push.
