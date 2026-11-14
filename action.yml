@@ -1,0 +1,112 @@
+name: Vigil security scan
+description: >-
+  Local-first security scan (code, dependencies, secrets) with reachability. Uploads SARIF to
+  GitHub code scanning and fails the check on serious findings. Source code never leaves the runner.
+author: kx7m2qd
+branding:
+  icon: shield
+  color: green
+
+inputs:
+  path:
+    description: Directory to scan, relative to the workspace.
+    default: "."
+  fail-on:
+    description: Fail the check if a finding is at least this severe (critical, high, medium, low, info, none).
+    default: high
+  trust-reachability:
+    description: Let fail-on use the lowered severity of dependencies nothing in the project uses.
+    default: "false"
+  reachable-only:
+    description: Leave unreachable dependency findings out of the report entirely.
+    default: "false"
+  offline:
+    description: Skip the registry lookups in the supply-chain checks (npm/PyPI package names only).
+    default: "false"
+  engines:
+    description: Comma-separated subset of engines to run (default all).
+    default: ""
+  upload-sarif:
+    description: Upload results to GitHub code scanning. Needs `security-events: write`.
+    default: "true"
+  sarif-file:
+    description: Where to write the SARIF report.
+    default: vigil.sarif
+
+outputs:
+  exit-code:
+    description: "0 clean, 1 findings at or above fail-on, 2 engine or usage error."
+    value: ${{ steps.scan.outputs.exit-code }}
+  sarif-file:
+    description: Path of the SARIF report.
+    value: ${{ steps.scan.outputs.sarif-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node
+      uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      with:
+        node-version: 22
+
+    - name: Build Vigil
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        npm ci --no-audit --no-fund --ignore-scripts
+        npm run build
+        echo "VIGIL_HOME=$RUNNER_TEMP/vigil-home" >> "$GITHUB_ENV"
+        echo "engines-key=vigil-engines-$RUNNER_OS-$RUNNER_ARCH-$(sha256sum src/engines/manifest.ts | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      id: build
+
+    # Engine binaries are re-verified against their pinned SHA-256 on every run, so a tampered
+    # cache is replaced, never executed.
+    - name: Cache engines
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ${{ runner.temp }}/vigil-home
+        key: ${{ steps.build.outputs.engines-key }}
+
+    - name: Scan
+      id: scan
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        IN_PATH: ${{ inputs.path }}
+        IN_FAIL_ON: ${{ inputs.fail-on }}
+        IN_TRUST: ${{ inputs.trust-reachability }}
+        IN_REACHABLE_ONLY: ${{ inputs.reachable-only }}
+        IN_OFFLINE: ${{ inputs.offline }}
+        IN_ENGINES: ${{ inputs.engines }}
+        IN_SARIF: ${{ inputs.sarif-file }}
+      run: |
+        args=(scan "$IN_PATH" --format sarif --output "$IN_SARIF" --fail-on "$IN_FAIL_ON")
+        [ "$IN_TRUST" = "true" ] && args+=(--trust-reachability)
+        [ "$IN_REACHABLE_ONLY" = "true" ] && args+=(--reachable-only)
+        [ "$IN_OFFLINE" = "true" ] && args+=(--offline)
+        [ -n "$IN_ENGINES" ] && args+=(--engines "$IN_ENGINES")
+        set +e
+        node "$ACTION_PATH/dist/cli.js" "${args[@]}"
+        code=$?
+        set -e
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        echo "sarif-file=$IN_SARIF" >> "$GITHUB_OUTPUT"
+        [ -f "$IN_SARIF" ] && node "$ACTION_PATH/scripts/action-summary.mjs" "$IN_SARIF" "$code" >> "$GITHUB_STEP_SUMMARY" || true
+
+    - name: Upload to code scanning
+      if: ${{ always() && inputs.upload-sarif == 'true' && hashFiles(inputs.sarif-file) != '' }}
+      uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        category: vigil
+
+    - name: Gate
+      shell: bash
+      env:
+        CODE: ${{ steps.scan.outputs.exit-code }}
+      run: |
+        case "$CODE" in
+          0) echo "Vigil: no findings at or above the fail-on level." ;;
+          1) echo "::error::Vigil found issues at or above the fail-on level. See the Security tab or the job summary."; exit 1 ;;
+          *) echo "::error::Vigil could not complete the scan (exit $CODE). See the Scan step log."; exit 2 ;;
+        esac
