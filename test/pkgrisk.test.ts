@@ -211,6 +211,10 @@ describe("typosquat matching", () => {
     expect(idx.match("listr")).toBeUndefined();
     expect(idx.match("prompt")).toBeUndefined();
     expect(idx.match("@types/jws")).toBeUndefined();
+    // A plural is a sibling, but doubling an existing final "s" is a typo.
+    const s = new PopularIndex(["express", "prompt"], "npm");
+    expect(s.match("prompts")).toBeUndefined();
+    expect(s.match("expresss")?.target).toBe("express");
     const py = new PopularIndex(["pyqt5-sip", "rfc3339-validator", "python-dateutil"], "PyPI");
     expect(py.match("pyqt6-sip")).toBeUndefined(); // version swap
     expect(py.match("rfc3986-validator")).toBeUndefined();

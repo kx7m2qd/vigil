@@ -69,7 +69,8 @@ export function plausibleTypo(a: string, b: string): boolean {
     const m = /^(.*?)(\d+)(.*)$/.exec(long);
     return m !== null && m[3] !== "" && `${m[1]}${m[3]}` === short;
   }
-  if (long.length === short.length + 1 && long === `${short}s`) return false; // plural
+  // Plural siblings (prompt/prompts) are not typos — but a doubled final "s" (express → expresss) is.
+  if (long.length === short.length + 1 && long === `${short}s` && !short.endsWith("s")) return false;
   const ta = a.split(/[-_./@]+/).filter(Boolean);
   const tb = b.split(/[-_./@]+/).filter(Boolean);
   if (ta.length === tb.length) {
