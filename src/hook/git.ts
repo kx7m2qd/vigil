@@ -47,6 +47,23 @@ export async function stagedFiles(root: string): Promise<string[]> {
   return splitNul(out);
 }
 
+/**
+ * Files changed in the working tree versus HEAD (added, copied, modified, renamed), plus untracked
+ * files that aren't gitignored. Paths are relative to `dir`, limited to it. In a repo with no
+ * commits yet, every tracked file counts as changed.
+ */
+export async function changedFiles(dir: string): Promise<string[]> {
+  let tracked: string[];
+  try {
+    await git(["rev-parse", "--verify", "--quiet", "HEAD"], dir);
+    tracked = splitNul(await git(["diff", "HEAD", "--name-only", "-z", "--relative", "--diff-filter=ACMR"], dir));
+  } catch {
+    tracked = splitNul(await git(["ls-files", "-z"], dir));
+  }
+  const untracked = splitNul(await git(["ls-files", "-z", "--others", "--exclude-standard"], dir));
+  return [...new Set([...tracked, ...untracked])].sort();
+}
+
 /** Mode and blob id of each path as staged in the index (stage 0 only). */
 export async function indexEntries(root: string, paths: string[]): Promise<Map<string, IndexEntry>> {
   const result = new Map<string, IndexEntry>();

@@ -73,23 +73,28 @@ test/           unit tests (vitest)
 - [x] 20 real CVE fixes (npm + PyPI advisories): `npm run bench:cves`, vulnerable vs fixed file, pinned + verified
 
 ### Phase 1 — MVP (months 1–3)  ← we are here
-- AI triage: per new finding, build context (code slice + taint trace) → Claude → verdict
-  (`true_positive | false_positive | needs_review`) + explanation. Cache by fingerprint.
-- Fix agent: patch → re-scan → run project tests → only then propose.
-- Malicious / non-existent package detection for npm + PyPI (typosquats, install scripts,
-  brand-new packages, packages AI tools hallucinate).
-- Basic reachability for JS/Python: is the vulnerable function imported/called?
-- GitHub App + Action: PR comments on changed lines, check run, fix PRs.
-- MCP server exposing `scan`, `explain`, `fix` to Claude Code / Cursor.
-- Pre-commit hook (`vigil hook install`): secrets + changed-file scan, fast enough to never be skipped.
-- Triage memory: "false positive" / "won't fix" decisions are stored per org and fed back into
-  triage, so each repo gets quieter over time (instead of hand-kept exclude lists).
-- Ownership: route each finding to an owner via CODEOWNERS, falling back to git blame.
-- AI-app rules: LLM output → SQL/shell/eval sinks, prompt-injection paths, unsafe model loading
-  (pickle / `torch.load`), over-permissioned MCP server configs. (Started: `py-llm-output-to-dangerous-sink`.)
-- Dashboard: Next.js + Supabase, findings list, Stripe billing. Receives findings only.
+Done: malicious / non-existent package detection (npm + PyPI), import-level reachability for JS/Python,
+pre-commit hook (`vigil hook install`), GitHub Action (scan, SARIF upload, severity gate) — released as v0.1.0.
+
+Remaining, in this order (agreed 2026-11-14):
+1. MCP server exposing `scan`, `explain`, `check_package` to Claude Code / Cursor (`fix` once the
+   fix agent exists). Spec: `docs/specs/mcp-server.md`.
+2. Action: PR comments on changed lines + check run. Then list on the GitHub Marketplace.
+3. Ownership: route each finding to an owner via CODEOWNERS, falling back to git blame.
+4. AI triage: per new finding, build context (code slice + taint trace) → model → verdict
+   (`true_positive | false_positive | needs_review`) + explanation. Cache by fingerprint.
+   Local model first, Claude opt-in with the user's own key.
+5. Triage memory: "false positive" / "won't fix" decisions are stored and fed back into triage,
+   so each repo gets quieter over time (instead of hand-kept exclude lists).
+6. Fix agent: patch → re-scan → run project tests → only then propose. Adds fix PRs to the Action.
+
+Alongside all of it, via the rule loop: AI-app rules — LLM output → SQL/shell/eval sinks,
+prompt-injection paths, unsafe model loading (pickle / `torch.load`), over-permissioned MCP server
+configs. (Started: `py-llm-output-to-dangerous-sink`.)
 
 ### Phase 2 — Platform (months 4–8, once users arrive)
+- GitHub App (moved from Phase 1: needs a hosted backend; the Action covers PRs until then).
+- Dashboard: Next.js + Supabase, findings list, Stripe billing. Receives findings only. (Moved from Phase 1.)
 - Access-control pentest agent (multi-role IDOR testing): the headline feature.
 - VS Code, then JetBrains extension; GitLab.
 - Java + Go, IaC (Checkov), SBOM/VEX + AI-BOM (models, prompts, AI SDKs) + Cosign signing.

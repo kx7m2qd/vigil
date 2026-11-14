@@ -8,6 +8,8 @@ import { RULES_DIR } from "./engines/opengrep.js";
 import { run } from "./engines/run.js";
 import { install, uninstall } from "./hook/install.js";
 import { hookRun } from "./hook/run.js";
+import { serve } from "./mcp/protocol.js";
+import { createTools, INSTRUCTIONS } from "./mcp/tools.js";
 import { toSarif } from "./report/sarif.js";
 import { toText } from "./report/text.js";
 import { ALL_ENGINES, scan } from "./scan.js";
@@ -46,6 +48,9 @@ Usage:
                                     What the hook calls (default: high). Exit 1 blocked, 2 engine
                                     missing (fail closed). Dependency checks: use \`${TOOL_NAME} scan\` in CI.
                                     Bypass once: git commit with the no-verify flag.
+  ${TOOL_NAME} mcp [path]           MCP server on stdio for coding agents (tools: scan, explain,
+                                  check_package). Confined to [path] (default: .). Add to Claude Code:
+                                  claude mcp add vigil -- npx -y @kx7m2qd/vigil mcp
   ${TOOL_NAME} test-rules           Run the rule test suite (rules/**)
 
 Exit codes: 0 clean · 1 findings at or above --fail-on · 2 usage or engine error
@@ -176,6 +181,18 @@ async function cmdTestRules(): Promise<number> {
   return res.code;
 }
 
+async function cmdMcp(args: string[]): Promise<number> {
+  const { positionals } = parseArgs({ args, allowPositionals: true, options: {} });
+  if (positionals.length > 1) fail(`usage: ${TOOL_NAME} mcp [path]`);
+  // stdout is the protocol channel: everything else goes to stderr.
+  await serve({ name: TOOL_NAME, version: TOOL_VERSION, instructions: INSTRUCTIONS }, createTools(positionals[0] ?? "."), {
+    input: process.stdin,
+    output: process.stdout,
+    log: (line) => process.stderr.write(`${TOOL_NAME} mcp: ${line}\n`),
+  });
+  return 0;
+}
+
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
   switch (command) {
@@ -185,6 +202,8 @@ async function main(argv: string[]): Promise<number> {
       return cmdEngines(rest);
     case "hook":
       return cmdHook(rest);
+    case "mcp":
+      return cmdMcp(rest);
     case "test-rules":
       return cmdTestRules();
     case "--version":

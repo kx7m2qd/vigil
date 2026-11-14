@@ -69,9 +69,14 @@ function ageText(ms: number): string {
 }
 
 export async function runPkgrisk(root: string, ignores: string[], opts: PkgriskOptions = {}): Promise<EngineOutput> {
+  const { refs, notes } = await loadRefs(root, ignores);
+  return assessRefs(refs, notes.map((n) => `pkgrisk: ${n}`), opts);
+}
+
+/** Run every pkgrisk rule over already-loaded package references (also used by the MCP `check_package` tool). */
+export async function assessRefs(allRefs: PkgRef[], initialWarnings: string[], opts: PkgriskOptions = {}): Promise<EngineOutput> {
   const now = (opts.now ?? Date.now)();
-  const { refs: allRefs, notes } = await loadRefs(root, ignores);
-  const warnings = notes.map((n) => `pkgrisk: ${n}`);
+  const warnings = [...initialWarnings];
   const data = loadTyposquatData();
   const popular = (r: PkgRef) => data[r.ecosystem].has(r.name);
 

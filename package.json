@@ -1,12 +1,41 @@
 {
-  "name": "vigil",
+  "name": "@kx7m2qd/vigil",
   "version": "0.1.0",
   "description": "Local-first application security scanner: SAST, SCA and secrets with one finding model.",
+  "keywords": [
+    "security",
+    "sast",
+    "sca",
+    "secrets",
+    "supply-chain",
+    "mcp",
+    "opengrep",
+    "osv-scanner",
+    "gitleaks"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kx7m2qd/vigil.git"
+  },
+  "homepage": "https://github.com/kx7m2qd/vigil#readme",
+  "bugs": {
+    "url": "https://github.com/kx7m2qd/vigil/issues"
+  },
   "type": "module",
   "license": "UNLICENSED",
-  "private": true,
   "bin": {
     "vigil": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "rules/**/*.yml",
+    "config/*.toml",
+    "data",
+    "SECURITY.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "engines": {
     "node": ">=22"
@@ -21,7 +50,8 @@
     "check": "npm run typecheck && npm test && npm run test:rules",
     "bench:owasp": "tsx bench/owasp.ts",
     "bench:cves": "tsx bench/cves.ts",
-    "data:popular": "tsx scripts/fetch-popular.ts"
+    "data:popular": "tsx scripts/fetch-popular.ts",
+    "prepack": "npm run build"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
