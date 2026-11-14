@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
+import { itemsFromSarif, report } from "./action/github.js";
 import { gateSeverity, SEVERITY_ORDER, severityAtLeast, type EngineName, type Severity } from "./core/finding.js";
 import { enginePath, installEngine, isInstalled, resolveEngine } from "./engines/install.js";
 import { BINARY_ENGINES, ENGINES } from "./engines/manifest.js";
@@ -193,6 +194,42 @@ async function cmdMcp(args: string[]): Promise<number> {
   return 0;
 }
 
+/** Used by action.yml: check run + PR review comments from the SARIF report. Not a user command. */
+async function cmdActionReport(args: string[]): Promise<number> {
+  const { values } = parseArgs({
+    args,
+    options: {
+      sarif: { type: "string" },
+      "exit-code": { type: "string", default: "0" },
+      prefix: { type: "string", default: "" },
+      "check-run": { type: "string", default: "true" },
+      "pr-comments": { type: "string", default: "true" },
+      "min-severity": { type: "string", default: "medium" },
+    },
+  });
+  const env = process.env;
+  const min = values["min-severity"] as Severity;
+  if (!values.sarif) fail("action-report: --sarif is required");
+  if (!SEVERITY_ORDER.includes(min)) fail(`unknown severity "${min}"`);
+  if (!env.VIGIL_GITHUB_TOKEN || !env.GITHUB_REPOSITORY) {
+    process.stdout.write("::notice::Vigil: no GitHub token or repository; skipping check run and PR comments.\n");
+    return 0;
+  }
+  const event = env.GITHUB_EVENT_PATH ? JSON.parse(await readFile(env.GITHUB_EVENT_PATH, "utf8").catch(() => "{}")) : {};
+  await report({
+    ctx: { api: env.GITHUB_API_URL ?? "https://api.github.com", repo: env.GITHUB_REPOSITORY, token: env.VIGIL_GITHUB_TOKEN, fetch },
+    event,
+    sha: env.GITHUB_SHA ?? "",
+    items: itemsFromSarif(JSON.parse(await readFile(values.sarif, "utf8")), values.prefix),
+    exitCode: Number(values["exit-code"]),
+    checkRun: values["check-run"] === "true",
+    prComments: values["pr-comments"] === "true",
+    minSeverity: min,
+    log: (line) => process.stdout.write(`${line}\n`),
+  });
+  return 0;
+}
+
 async function main(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
   switch (command) {
@@ -206,6 +243,8 @@ async function main(argv: string[]): Promise<number> {
       return cmdMcp(rest);
     case "test-rules":
       return cmdTestRules();
+    case "action-report":
+      return cmdActionReport(rest);
     case "--version":
     case "-v":
       process.stdout.write(`${TOOL_VERSION}\n`);

@@ -16,6 +16,7 @@ const SEVERITY = [
   ["info", 0],
 ];
 const severityOf = (r) => {
+  if (SEVERITY.some(([s]) => s === r.properties?.severity)) return r.properties.severity;
   const score = Number(rules[r.ruleIndex]?.properties?.["security-severity"] ?? 0);
   return SEVERITY.find(([, min]) => score >= min)[0];
 };

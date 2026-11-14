@@ -75,11 +75,12 @@ test/           unit tests (vitest)
 ### Phase 1 — MVP (months 1–3)  ← we are here
 Done: malicious / non-existent package detection (npm + PyPI), import-level reachability for JS/Python,
 pre-commit hook (`vigil hook install`), GitHub Action (scan, SARIF upload, severity gate) — released as v0.1.0.
+MCP server (`vigil mcp`: `scan`, `explain`, `check_package`; spec `docs/specs/mcp-server.md`). Action PR
+feedback: inline comments on added lines + `Vigil` check run (spec `docs/specs/pr-feedback.md`).
 
 Remaining, in this order (agreed 2026-11-14):
-1. MCP server exposing `scan`, `explain`, `check_package` to Claude Code / Cursor (`fix` once the
-   fix agent exists). Spec: `docs/specs/mcp-server.md`.
-2. Action: PR comments on changed lines + check run. Then list on the GitHub Marketplace.
+1. Release 0.2.0 to npm (needs license + npm scope/`NPM_TOKEN`), then list the Action on the GitHub Marketplace.
+2. (done: MCP, PR feedback)
 3. Ownership: route each finding to an owner via CODEOWNERS, falling back to git blame.
 4. AI triage: per new finding, build context (code slice + taint trace) → model → verdict
    (`true_positive | false_positive | needs_review`) + explanation. Cache by fingerprint.

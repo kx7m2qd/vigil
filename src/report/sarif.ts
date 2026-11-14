@@ -69,15 +69,17 @@ export function toSarif(result: ScanResult): object {
             },
           ],
           partialFingerprints: { [`${TOOL_NAME}/v1`]: f.id },
-          ...(f.reachability
-            ? {
-                properties: {
+          // Findings sharing a rule can differ in severity (reachability lowers it per finding).
+          properties: {
+            severity: f.severity,
+            ...(f.reachability
+              ? {
                   reachability: f.reachability.status,
                   reachabilityReason: f.reachability.reason,
                   ...(f.reachability.originalSeverity ? { originalSeverity: f.reachability.originalSeverity } : {}),
-                },
-              }
-            : {}),
+                }
+              : {}),
+          },
           ...(f.dataflow
             ? {
                 codeFlows: [
