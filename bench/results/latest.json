@@ -300,6 +300,12 @@
     "express-api/src/reports.js:7 js-sql-injection ← js-sql-formatted-query"
   ],
   "missed": [],
+  "reachability": {
+    "correct": 15,
+    "total": 15,
+    "wrong": [],
+    "wrongUnreachable": 0
+  },
   "warnings": [
     "pkgrisk: 1 dependencies run install scripts (not reported individually)"
   ]

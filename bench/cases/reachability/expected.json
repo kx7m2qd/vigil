@@ -1,0 +1,22 @@
+{
+  "_comment": "Synthetic vulnerable-dependency findings for each package below, scored against Vigil's reachability verdict. A wrong 'unreachable' fails the gate.",
+  "npm-app": {
+    "qs": "reachable",
+    "debug": "reachable",
+    "body-parser": "reachable",
+    "lodash": "reachable",
+    "tough-cookie": "unreachable",
+    "request": "unreachable",
+    "pg": "unknown",
+    "pg-types": "unknown",
+    "minimist": "reachable"
+  },
+  "py-app": {
+    "markupsafe": "reachable",
+    "urllib3": "reachable",
+    "gunicorn": "reachable",
+    "pyyaml": "unreachable",
+    "psycopg2": "unknown",
+    "pluggy": "unknown"
+  }
+}

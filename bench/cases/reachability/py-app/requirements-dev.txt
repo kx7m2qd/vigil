@@ -1,0 +1,9 @@
+#
+#    pip-compile requirements-dev.in
+#
+pluggy==0.7.1
+    # via pytest
+py==1.5.4
+    # via pytest
+pytest==3.7.1
+    # via -r requirements-dev.in

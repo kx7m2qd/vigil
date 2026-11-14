@@ -12,6 +12,7 @@ import { resolveEngine } from "../src/engines/install.js";
 import { runOpengrep } from "../src/engines/opengrep.js";
 import { runPkgrisk } from "../src/engines/pkgrisk/index.js";
 import type { FetchLike } from "../src/engines/pkgrisk/registry.js";
+import { applyReachability } from "../src/reachability/index.js";
 
 const BENCH_DIR = fileURLToPath(new URL(".", import.meta.url));
 const CASES_DIR = join(BENCH_DIR, "cases");
@@ -90,6 +91,48 @@ async function supplyChain(): Promise<{ expected: string[]; got: string[]; warni
   return { expected: spec.expected, got, warnings: out.warnings };
 }
 
+/**
+ * bench/cases/reachability: a synthetic osv finding per package in expected.json, scored against the
+ * reachability verdict. Any package wrongly called "unreachable" fails the gate outright: that is
+ * the one mistake that hides real risk.
+ */
+async function reachability(): Promise<{ correct: number; total: number; wrong: string[]; wrongUnreachable: string[] }> {
+  const dir = join(CASES_DIR, "reachability");
+  const spec = JSON.parse(await readFile(join(dir, "expected.json"), "utf8")) as Record<string, Record<string, string> | string>;
+  const out = { correct: 0, total: 0, wrong: [] as string[], wrongUnreachable: [] as string[] };
+  for (const [app, expected] of Object.entries(spec)) {
+    if (typeof expected === "string") continue;
+    const ecosystem = app.startsWith("py") ? "PyPI" : "npm";
+    const lockfile = ecosystem === "npm" ? "package-lock.json" : "requirements.txt";
+    const findings: Finding[] = Object.keys(expected).map((name) => ({
+      id: name,
+      category: "dependency",
+      engine: "osv-scanner",
+      ruleId: "GHSA-bench",
+      title: name,
+      message: "",
+      severity: "high",
+      location: { path: `${app}/${lockfile}`, startLine: 1 },
+      cwe: [],
+      owasp: [],
+      dependency: { name, version: "", ecosystem, advisories: [], fixedVersions: [] },
+    }));
+    await applyReachability(dir, findings, DEFAULT_IGNORES);
+    for (const f of findings) {
+      const want = expected[f.id];
+      const got = f.reachability?.status ?? "none";
+      out.total++;
+      if (got === want) out.correct++;
+      else {
+        const line = `reachability: ${app} ${f.id} expected ${want}, got ${got} (${f.reachability?.reason ?? ""})`;
+        out.wrong.push(line);
+        if (got === "unreachable") out.wrongUnreachable.push(line);
+      }
+    }
+  }
+  return out;
+}
+
 const ratio = (num: number, den: number) => (den === 0 ? 1 : Math.round((num / den) * 1000) / 1000);
 
 async function main(): Promise<number> {
@@ -148,10 +191,12 @@ async function main(): Promise<number> {
   }
   warnings.push(...sc.warnings);
 
+  const reach = await reachability();
+
   const tp = matched.size + scTp;
   const precision = ratio(tp, tp + falsePositives.length);
   const recall = ratio(tp, labels.length + sc.expected.length);
-  const pass = precision >= thresholds.precision && recall >= thresholds.recall;
+  const pass = precision >= thresholds.precision && recall >= thresholds.recall && reach.wrongUnreachable.length === 0;
 
   const result = {
     pass,
@@ -173,6 +218,7 @@ async function main(): Promise<number> {
     falsePositives: falsePositives.sort(),
     bySibling: bySibling.sort(),
     missed: missedText,
+    reachability: { correct: reach.correct, total: reach.total, wrong: reach.wrong, wrongUnreachable: reach.wrongUnreachable.length },
     warnings,
   };
   await mkdir(join(BENCH_DIR, "results"), { recursive: true });
@@ -185,6 +231,8 @@ async function main(): Promise<number> {
   for (const m of result.missed) process.stdout.write(`  missed:         ${m}\n`);
   for (const b of result.bySibling) process.stdout.write(`  by sibling:     ${b}\n`);
   for (const w of warnings) process.stdout.write(`  warning: ${w}\n`);
+  for (const w of reach.wrong) process.stdout.write(`  ${w}\n`);
+  process.stdout.write(`\nreachability ${reach.correct}/${reach.total} correct, ${reach.wrongUnreachable.length} wrongly unreachable (gate 0)`);
   process.stdout.write(
     `\nprecision ${precision} (gate ${thresholds.precision})  recall ${recall} (gate ${thresholds.recall})  → ${pass ? "PASS" : "FAIL"}\n`,
   );

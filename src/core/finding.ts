@@ -25,6 +25,19 @@ export interface DependencyInfo {
   fixedVersions: string[];
 }
 
+export type ReachabilityStatus = "reachable" | "unreachable" | "unknown";
+
+/** Whether the project's own code uses a vulnerable dependency (import-level, not call-level). */
+export interface Reachability {
+  status: ReachabilityStatus;
+  /** One sentence a developer can check: what was (or wasn't) found. */
+  reason: string;
+  /** Where the import or reference was found (reachable), or what blocked a verdict (unknown). */
+  evidence?: { path: string; line: number };
+  /** Severity before an `unreachable` verdict lowered it by one level. */
+  originalSeverity?: Severity;
+}
+
 export interface DataflowStep {
   path: string;
   line: number;
@@ -49,6 +62,8 @@ export interface Finding {
   cwe: string[];
   owasp: string[];
   dependency?: DependencyInfo;
+  /** Set on vulnerable-dependency findings for npm and PyPI. */
+  reachability?: Reachability;
   /** Source → sink steps for taint findings. */
   dataflow?: DataflowStep[];
 }
@@ -95,10 +110,19 @@ export function severityAtLeast(s: Severity, threshold: Severity): boolean {
   return SEVERITY_ORDER.indexOf(s) <= SEVERITY_ORDER.indexOf(threshold);
 }
 
+/**
+ * The severity --fail-on compares against. Reachability is a heuristic, so by default an
+ * "unreachable" verdict lowers what a finding shows but not what blocks a build.
+ */
+export function gateSeverity(f: Finding, trustReachability = false): Severity {
+  return trustReachability ? f.severity : (f.reachability?.originalSeverity ?? f.severity);
+}
+
 export function sortFindings(findings: Finding[]): Finding[] {
   return [...findings].sort(
     (a, b) =>
       SEVERITY_ORDER.indexOf(a.severity) - SEVERITY_ORDER.indexOf(b.severity) ||
+      Number(a.reachability?.status === "unreachable") - Number(b.reachability?.status === "unreachable") ||
       a.location.path.localeCompare(b.location.path) ||
       a.location.startLine - b.location.startLine,
   );

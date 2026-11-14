@@ -8,6 +8,7 @@ import { runOpengrep } from "./engines/opengrep.js";
 import { runOsv } from "./engines/osv.js";
 import { runPkgrisk } from "./engines/pkgrisk/index.js";
 import type { EngineOutput } from "./engines/types.js";
+import { applyReachability } from "./reachability/index.js";
 
 export const ALL_ENGINES: EngineName[] = ["opengrep", "osv-scanner", "gitleaks", "pkgrisk"];
 
@@ -16,6 +17,10 @@ export interface ScanOptions {
   autoInstall?: boolean;
   /** Turn off pkgrisk's registry lookups (the only network use of that engine). */
   offline?: boolean;
+  /** Import-level reachability for vulnerable npm/PyPI dependencies (default: on). */
+  reachability?: boolean;
+  /** Drop findings judged unreachable instead of only lowering their severity. */
+  reachableOnly?: boolean;
 }
 
 export interface EngineStatus {
@@ -87,9 +92,20 @@ export async function scan(target: string, opts: ScanOptions = {}): Promise<Scan
     statuses.push({ engine: o.engine, ok: true, findings: kept.length, ms: o.ms });
   }
 
+  let kept = dedupe(findings);
+  if (opts.reachability ?? true) {
+    try {
+      await applyReachability(root, kept, ignores);
+    } catch (e) {
+      // Reachability only refines findings; a failure must never drop or block them.
+      warnings.push(`reachability analysis failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    if (opts.reachableOnly) kept = kept.filter((f) => f.reachability?.status !== "unreachable");
+  }
+
   return {
     root,
-    findings: sortFindings(dedupe(findings)),
+    findings: sortFindings(kept),
     ignores: ignores.slice(DEFAULT_IGNORES.length),
     warnings,
     engines: statuses,

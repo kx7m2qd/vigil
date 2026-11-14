@@ -1,0 +1,15 @@
+# Regression case: prose and cache paths must not count as using request / tough-cookie / npm.
+name: ci
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: deps
+      # request and tough-cookie are only kept for the legacy importer
+      - name: Retry request handling tests
+        run: npm ci && npm test # tough-cookie is not exercised here

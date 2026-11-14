@@ -1,0 +1,13 @@
+{
+  "name": "orders-api",
+  "version": "1.0.0",
+  "scripts": { "start": "node src/server.js", "test": "mocha" },
+  "dependencies": {
+    "express": "^4.16.0",
+    "lodash": "^4.17.4",
+    "request": "^2.88.0",
+    "sequelize": "^5.21.0",
+    "pg": "^7.18.0"
+  },
+  "devDependencies": { "mocha": "^5.2.0" }
+}

@@ -1,0 +1,13 @@
+# Regression case: a step title or comment naming pyyaml must not count as using it.
+name: ci
+on: push
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      FLASK_APP: app/main.py
+    steps:
+      - uses: actions/checkout@v4
+      # pyyaml stays pinned until the config loader is removed
+      - name: Check pyyaml pin
+        run: pip install -r requirements.txt

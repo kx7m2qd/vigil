@@ -69,6 +69,15 @@ export function toSarif(result: ScanResult): object {
             },
           ],
           partialFingerprints: { [`${TOOL_NAME}/v1`]: f.id },
+          ...(f.reachability
+            ? {
+                properties: {
+                  reachability: f.reachability.status,
+                  reachabilityReason: f.reachability.reason,
+                  ...(f.reachability.originalSeverity ? { originalSeverity: f.reachability.originalSeverity } : {}),
+                },
+              }
+            : {}),
           ...(f.dataflow
             ? {
                 codeFlows: [

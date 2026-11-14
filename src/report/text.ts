@@ -27,6 +27,12 @@ export function toText(result: ScanResult, opts: { color: boolean }): string {
       const path = f.dataflow.map((s) => `${s.snippet ?? "?"} (L${s.line})`).join(" → ");
       lines.push(`         ${c(DIM, "flow:")} ${safe(path).replace(/\n/g, " ").slice(0, 200)}`);
     }
+    if (f.reachability) {
+      const r = f.reachability;
+      const tag = r.status === "reachable" ? c(COLOR.high, "reachable") : r.status === "unreachable" ? c(DIM, "unreachable") : "unknown";
+      const was = r.originalSeverity ? c(DIM, ` (was ${r.originalSeverity})`) : "";
+      lines.push(`         ${c(DIM, "reach:")} ${tag}${was}  ${c(DIM, safe(r.reason).slice(0, 200))}`);
+    }
     lines.push(`         ${safe(f.message).split("\n")[0]?.slice(0, 240)}`);
     lines.push("");
   }

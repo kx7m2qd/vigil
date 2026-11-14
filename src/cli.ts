@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { writeFile } from "node:fs/promises";
 import { parseArgs } from "node:util";
-import { SEVERITY_ORDER, severityAtLeast, type EngineName, type Severity } from "./core/finding.js";
+import { gateSeverity, SEVERITY_ORDER, severityAtLeast, type EngineName, type Severity } from "./core/finding.js";
 import { enginePath, installEngine, isInstalled, resolveEngine } from "./engines/install.js";
 import { BINARY_ENGINES, ENGINES } from "./engines/manifest.js";
 import { RULES_DIR } from "./engines/opengrep.js";
@@ -24,6 +24,11 @@ Usage:
       --no-install                 Do not auto-install missing engines
       --offline                    Turn off the pkgrisk network checks (registry lookups). Typosquat,
                                    install-script and known-malicious checks still run.
+      --no-reachability            Skip the reachability check. By default, vulnerable dependencies
+                                   that nothing in the project uses are shown one severity level
+                                   lower, but still fail --fail-on at their original severity.
+      --trust-reachability         Let --fail-on use the lowered severity of unreachable findings
+      --reachable-only             Hide unreachable findings entirely (implies --trust-reachability)
 
   pkgrisk (dependency supply-chain checks) sends package names and versions, nothing else, to
   registry.npmjs.org and pypi.org (osv-scanner already sends the same to osv.dev). Source code, file
@@ -67,6 +72,9 @@ async function cmdScan(args: string[]): Promise<number> {
       engines: { type: "string" },
       "no-install": { type: "boolean", default: false },
       offline: { type: "boolean", default: false },
+      "reachable-only": { type: "boolean", default: false },
+      "no-reachability": { type: "boolean", default: false },
+      "trust-reachability": { type: "boolean", default: false },
     },
   });
   const format = values.format;
@@ -78,6 +86,8 @@ async function cmdScan(args: string[]): Promise<number> {
     engines: parseEngines(values.engines),
     autoInstall: !values["no-install"],
     offline: values.offline,
+    reachability: !values["no-reachability"],
+    reachableOnly: values["reachable-only"],
   });
 
   const report =
@@ -96,7 +106,8 @@ async function cmdScan(args: string[]): Promise<number> {
   if (format !== "text") for (const w of result.warnings) process.stderr.write(`warning: ${w}\n`);
 
   if (result.engines.some((e) => !e.ok)) return 2;
-  if (failOn !== "none" && result.findings.some((f) => severityAtLeast(f.severity, failOn as Severity))) return 1;
+  const trust = values["trust-reachability"];
+  if (failOn !== "none" && result.findings.some((f) => severityAtLeast(gateSeverity(f, trust), failOn as Severity))) return 1;
   return 0;
 }
 
