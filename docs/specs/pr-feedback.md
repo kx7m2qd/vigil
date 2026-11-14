@@ -4,7 +4,9 @@ Goal: on a pull request, a reviewer sees Vigil's findings where they read code: 
 the lines the PR adds, and a "Vigil" check run with annotations. Push events get the check run only.
 
 ## Inputs (action.yml)
-- `pr-comments` (default `true`): review comments on added lines.
+- `pr-comments` (default `auto`): review comments on added lines. `auto` = only when `upload-sarif` is
+  off, because code scanning already comments on PR lines from the SARIF upload (seen on PR #1:
+  the same finding twice).
 - `check-run` (default `true`): a completed `Vigil` check run on the PR head (or pushed) commit.
 - `comment-min-severity` (default `medium`): weaker findings go to the check run only.
 - `github-token` (default `${{ github.token }}`).

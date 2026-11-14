@@ -36,8 +36,11 @@ inputs:
     description: "Post a \"Vigil\" check run with annotations. Needs `checks: write`."
     default: "true"
   pr-comments:
-    description: "On pull requests, comment on the added lines that have findings. Needs `pull-requests: write`."
-    default: "true"
+    description: >-
+      On pull requests, comment on the added lines that have findings. Needs `pull-requests: write`.
+      `auto` (default) comments only when upload-sarif is off: with it on, GitHub code scanning
+      already comments on those lines.
+    default: auto
   comment-min-severity:
     description: Weakest severity that gets a PR comment (weaker findings appear in the check run only).
     default: medium
@@ -135,7 +138,7 @@ runs:
 
     # Check run + inline PR comments. Sends Finding data only; never fails the job (the Gate does).
     - name: Report to pull request
-      if: ${{ always() && (inputs.check-run == 'true' || inputs.pr-comments == 'true') && hashFiles(inputs.sarif-file) != '' }}
+      if: ${{ always() && (inputs.check-run == 'true' || inputs.pr-comments == 'true' || (inputs.pr-comments == 'auto' && inputs.upload-sarif != 'true')) && hashFiles(inputs.sarif-file) != '' }}
       shell: bash
       env:
         ACTION_PATH: ${{ github.action_path }}
@@ -145,8 +148,12 @@ runs:
         PREFIX: ${{ steps.scan.outputs.prefix }}
         IN_CHECK_RUN: ${{ inputs.check-run }}
         IN_PR_COMMENTS: ${{ inputs.pr-comments }}
+        IN_UPLOAD: ${{ inputs.upload-sarif }}
         IN_MIN: ${{ inputs.comment-min-severity }}
       run: |
+        if [ "$IN_PR_COMMENTS" = "auto" ]; then
+          [ "$IN_UPLOAD" = "true" ] && IN_PR_COMMENTS=false || IN_PR_COMMENTS=true
+        fi
         node "$ACTION_PATH/dist/cli.js" action-report --sarif "$IN_SARIF" --exit-code "${CODE:-2}" --prefix "$PREFIX" \
           --check-run "$IN_CHECK_RUN" --pr-comments "$IN_PR_COMMENTS" --min-severity "$IN_MIN" \
           || echo "::warning::Vigil could not report to the pull request."
